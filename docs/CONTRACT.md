@@ -21,7 +21,7 @@ must keep working untouched.
 | Weekly learning report | `tools/learning_report.py` | Correlation-only report, no causal claims |
 
 LDS base URL used by HA: `http://a0d7b954-cordyceps-lds:8099` (add-on) or
-`http://192.168.1.50:8099` (docker). Configurable in HA via
+`http://<lab-host-ip>:8099` (docker). Configurable in HA via
 `input_text.lds_base_url` is NOT used — it is a single `secrets.yaml` key:
 `lds_base_url`. Auth: static bearer token from `secrets.yaml` key `lds_token`.
 

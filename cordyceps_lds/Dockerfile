@@ -8,11 +8,18 @@
 #   We use the MULTI-ARCH Home Assistant base image so this builds unchanged on
 #   amd64 (NUC/VM) and aarch64 (Raspberry Pi 4/5, ODROID). Do not pin this back
 #   to a {arch}- prefixed image — that is what broke portability before.
-FROM ghcr.io/home-assistant/base:2026.08.0
+#
+#   TAG FORMAT: <alpine-version>-<base-build-version>, e.g. 3.24-2026.08.0.
+#   There is NO bare "2026.08.0" tag. Do not assume the tag matches the Home
+#   Assistant Core release number — verify against the registry:
+#     https://github.com/home-assistant/docker-base/pkgs/container/base
+#   This tag resolves to alpine:3.24 with S6 Overlay v3 (entrypoint /init),
+#   published for linux/amd64 and linux/arm64 only.
+FROM ghcr.io/home-assistant/base:3.24-2026.08.0
 
 # BUILD_ARCH / BUILD_VERSION are the only args Supervisor still provides.
 ARG BUILD_ARCH="amd64"
-ARG BUILD_VERSION="2.1.0"
+ARG BUILD_VERSION="2.1.1"
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -39,7 +46,8 @@ LABEL \
     io.hass.name="Cordyceps Lab Data Service" \
     io.hass.description="FastAPI + SQLite batch/jar tracking service for the Cordyceps lab" \
     io.hass.version="${BUILD_VERSION}" \
-    io.hass.type="addon" \
-    io.hass.arch="${BUILD_ARCH}"
+    io.hass.type="app" \
+    io.hass.arch="${BUILD_ARCH}" \
+    io.hass.url="https://github.com/aman0069/ha-cordyceps-lab"
 
 CMD [ "/run.sh" ]

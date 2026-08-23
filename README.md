@@ -27,24 +27,34 @@ else. Do not add another file named `config.yaml` anywhere in this repo.
 
 ## 1. Install the app
 
-Because this repository is **private**, Home Assistant needs a credentialed URL.
-
-1. Create a fine-grained personal access token with read access to this repo.
-2. **Settings → Add-ons → Add-on Store → ⋮ → Repositories**, add:
+1. **Settings → Add-ons → Add-on Store → ⋮ → Repositories**, add:
    ```
-   https://<your-token>@github.com/aman0069/ha-cordyceps-lab
+   https://github.com/aman0069/ha-cordyceps-lab
    ```
-3. **Cordyceps Lab Data Service** appears in the store. Install it.
-4. In **Configuration** set:
+2. **Cordyceps Lab Data Service** appears in the store. Install it.
+3. In **Configuration** set:
    ```yaml
    token: "a-long-random-string-you-generate"
    timezone: Asia/Kolkata
    ha_base_url: "http://homeassistant.local:8123"
    ```
-5. Start it. Enable **Start on boot** and **Watchdog**.
+4. Start it. Enable **Start on boot** and **Watchdog**.
 
-The app builds on-device from `ghcr.io/home-assistant/base`, so it works on both
-amd64 and aarch64 hardware.
+The app builds on-device from `ghcr.io/home-assistant/base:3.24-2026.08.0`.
+
+**Supported architectures: `amd64` and `aarch64` only.** That is the full set the
+Home Assistant base image publishes; there is no 32-bit ARM build, so this will
+not install on a Raspberry Pi 3 or older, or on a 32-bit OS image.
+
+If you change the pinned base image or the `arch:` list, run this first:
+```bash
+python tools/check_base_image.py
+```
+It confirms the tag actually exists in the registry and that every declared
+architecture is really published. Base image tags are
+`<alpine-version>-<build-version>` (e.g. `3.24-2026.08.0`) and do **not** track
+the Home Assistant Core version — guessing one produces an install-time
+`not found` and nothing else. CI runs this check on every push and weekly.
 
 Non-HAOS alternative: `docker compose up -d` or the systemd unit, both in
 `cordyceps_lds/`.

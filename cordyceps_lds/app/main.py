@@ -30,7 +30,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Cordyceps Lab Data Service", version="2.1.0", lifespan=lifespan)
+app = FastAPI(title="Cordyceps Lab Data Service", version="2.1.1", lifespan=lifespan)
 security = HTTPBearer(auto_error=False)
 SOURCE_VALUES = {"manual", "qr_scan", "sensor", "import", "system"}
 EXPORT_TABLES = {
@@ -283,7 +283,7 @@ class LabelsRequest(ContractModel):
 # It exposes no lab data.
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "version": "2.1.0"}
+    return {"status": "ok", "version": "2.1.1"}
 
 
 # ---------------------------------------------------------------------------

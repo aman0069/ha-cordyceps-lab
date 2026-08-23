@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.1.1
+
+### Fixed
+- **Install-blocking bad base image tag.** The Dockerfile pinned
+  `ghcr.io/home-assistant/base:2026.08.0`, which does not exist — the tag was
+  inferred from the Home Assistant Core release number. The real format is
+  `<alpine-version>-<base-build-version>`. Now pinned to
+  `ghcr.io/home-assistant/base:3.24-2026.08.0` (alpine:3.24, S6 Overlay v3),
+  verified against the registry.
+- **`arch` list claimed unbuildable architectures.** `armv7`, `armhf` and `i386`
+  were declared, but the base image publishes only linux/amd64 and linux/arm64,
+  so Supervisor could start a build that had no reachable base image. Narrowed
+  to `amd64` and `aarch64`.
+- `url:` and the `io.hass.url` label pointed at a placeholder repository.
+- `io.hass.type` label corrected to `app`.
+
+### Added
+- **`tools/check_base_image.py`** — verifies the pinned base tag exists in the
+  registry and that every architecture in `config.yaml` is actually published by
+  that image. This is the check that would have caught the 2.1.0 failure before
+  install rather than on the target device.
+- **GitHub Actions CI** — runs the base-image check (also weekly on a schedule,
+  since upstream tags can be retired), the test suite, HA YAML parsing, and app
+  config sanity: exactly one `config.yaml`, `run.sh` committed executable, and
+  the version consistent across config, Dockerfile and app.
+
+### Changed
+- Sample label tokens replaced with obvious `DEMO...` placeholders, and the
+  maintainer email and example LAN IP removed, ahead of making the repo public.
+
 ## 2.1.0
 
 Compatibility pass against HA Core 2026.8.3 / Supervisor 2026.07.5 / HAOS 18.2.

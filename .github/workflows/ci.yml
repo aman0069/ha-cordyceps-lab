@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The base image tag can be retired upstream even if nothing here changes,
+  # so re-check weekly rather than only on push.
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  base-image:
+    name: Base image tag exists and covers declared arches
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python tools/check_base_image.py
+
+  tests:
+    name: Service tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r cordyceps_lds/requirements.txt pytest httpx
+      - name: Run tests
+        working-directory: cordyceps_lds
+        run: python -m pytest tests -q
+
+  yaml:
+    name: Home Assistant YAML parses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Parse packages and dashboards
+        run: |
+          python - <<'PY'
+          import glob, sys, yaml
+
+          # Home Assistant custom tags are not valid plain YAML.
+          class L(yaml.SafeLoader):
+              pass
+          for t in ["!secret", "!include", "!include_dir_named",
+                    "!include_dir_list", "!include_dir_merge_named",
+                    "!include_dir_merge_list", "!env_var", "!input"]:
+              L.add_constructor(t, lambda loader, node: "X")
+
+          failed = False
+          files = sorted(glob.glob("homeassistant/**/*.yaml", recursive=True))
+          files += ["cordyceps_lds/config.yaml", "repository.yaml"]
+          for f in files:
+              try:
+                  yaml.load(open(f), Loader=L)
+                  print("OK  ", f)
+              except Exception as exc:
+                  print("FAIL", f, exc)
+                  failed = True
+          sys.exit(1 if failed else 0)
+          PY
+
+  addon-config:
+    name: App config sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exactly one config.yaml
+        # Supervisor searches an app repository recursively; a second config.yaml
+        # would register a phantom app.
+        run: |
+          n=$(find . -name config.yaml -not -path "./.git/*" | wc -l)
+          find . -name config.yaml -not -path "./.git/*"
+          test "$n" -eq 1 || { echo "Expected exactly 1 config.yaml, found $n"; exit 1; }
+      - name: run.sh is executable
+        # A non-executable run script is a silent install failure.
+        run: |
+          mode=$(git ls-files -s cordyceps_lds/run.sh | cut -d' ' -f1)
+          echo "mode=$mode"
+          test "$mode" = "100755" || { echo "run.sh must be committed executable"; exit 1; }
+      - name: Version matches across config, Dockerfile and app
+        run: |
+          cfg=$(grep -oP '^version:\s*"\K[^"]+' cordyceps_lds/config.yaml)
+          dkr=$(grep -oP 'ARG BUILD_VERSION="\K[^"]+' cordyceps_lds/Dockerfile)
+          app=$(grep -oP 'version="\K[0-9.]+' cordyceps_lds/app/main.py | head -1)
+          echo "config=$cfg dockerfile=$dkr app=$app"
+          test "$cfg" = "$dkr" -a "$cfg" = "$app" || { echo "Version mismatch"; exit 1; }

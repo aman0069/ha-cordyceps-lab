@@ -5,18 +5,16 @@
 # Do not add another file named config.yaml anywhere inside this folder.
 name: Cordyceps Lab Data Service
 slug: cordyceps_lds
-version: "2.1.0"
+version: "2.1.1"
 description: FastAPI and SQLite batch, jar, and stage tracking service for Cordyceps Lab v2
-url: https://github.com/local/cordyceps-lab-v2
+url: https://github.com/aman0069/ha-cordyceps-lab
 
-# Build on whatever the host actually is. HAOS 18.2 runs on both amd64 and
-# aarch64 hardware; listing only amd64 previously made this uninstallable on Pi.
+# Only what the base image can actually build for. ghcr.io/home-assistant/base
+# publishes linux/amd64 and linux/arm64 ONLY — listing armv7/armhf/i386 here
+# would let Supervisor start a build that cannot possibly resolve a base image.
 arch:
   - amd64
   - aarch64
-  - armv7
-  - armhf
-  - i386
 
 # Required for S6 Overlay v3 base images — the app will not start if this is true.
 init: false
