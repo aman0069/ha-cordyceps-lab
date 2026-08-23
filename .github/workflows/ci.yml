@@ -90,6 +90,21 @@ jobs:
           mode=$(git ls-files -s cordyceps_lds/run.sh | cut -d' ' -f1)
           echo "mode=$mode"
           test "$mode" = "100755" || { echo "run.sh must be committed executable"; exit 1; }
+      - name: Host port is not the contested 8099
+        # 8099 is the default ingress_port for HA apps, so publishing it on the
+        # host collides with Zigbee2MQTT, SSH/Terminal, File Editor and others.
+        run: |
+          host_port=$(grep -oP '^\s*\d+/tcp:\s*\K\d+' cordyceps_lds/config.yaml)
+          echo "host port = $host_port"
+          test "$host_port" != "8099" || { echo "Do not publish 8099 on the host"; exit 1; }
+      - name: Label default URL matches the published host port
+        # The host port is encoded in every printed QR code; a mismatch here
+        # would silently produce labels that resolve nowhere.
+        run: |
+          host_port=$(grep -oP '^\s*\d+/tcp:\s*\K\d+' cordyceps_lds/config.yaml)
+          label_port=$(grep -oP 'DEFAULT_BASE_URL = "http://[^:]+:\K\d+' tools/make_labels.py)
+          echo "config host port=$host_port  label default port=$label_port"
+          test "$host_port" = "$label_port" || { echo "Port mismatch: labels would not resolve"; exit 1; }
       - name: Version matches across config, Dockerfile and app
         run: |
           cfg=$(grep -oP '^version:\s*"\K[^"]+' cordyceps_lds/config.yaml)

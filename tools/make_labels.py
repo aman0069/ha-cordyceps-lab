@@ -34,7 +34,14 @@ from reportlab.pdfgen import canvas
 # configured. Printed QR codes are permanent, so they must not embed Home
 # Assistant's own port -- HA 2026.8 makes that port user-editable, and any
 # change would otherwise invalidate every label already stuck to a jar.
-DEFAULT_BASE_URL = "http://homeassistant.local:8099"
+#
+# PORT 8189, not 8099: 8099 is the default `ingress_port` for Home Assistant
+# apps, so publishing it on the host collides with Zigbee2MQTT, SSH/Terminal and
+# others. The container still listens on 8099; 8189 is the host mapping.
+#
+# THIS VALUE IS PERMANENT ONCE YOU PRINT. It is encoded in every QR code. If it
+# has to change later, existing labels stop resolving and must be reprinted.
+DEFAULT_BASE_URL = "http://homeassistant.local:8189"
 # Set to "direct" to embed the HA dashboard URL instead (legacy, not advised).
 DEFAULT_LINK_MODE = "redirect"
 DEFAULT_DPI = 300
@@ -503,7 +510,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--input", type=Path, help="Offline .json or .csv jar-record file")
-    source.add_argument("--lds", help="LDS base URL, for example http://host:8099")
+    source.add_argument("--lds", help="LDS base URL, for example http://host:8189")
     parser.add_argument("--token", help="LDS bearer token (required with --lds)")
     parser.add_argument("--batch", help="Batch ID (required with --lds)")
     parser.add_argument(

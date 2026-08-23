@@ -20,8 +20,10 @@ must keep working untouched.
 | Label generator | `tools/make_labels.py` | Print-ready PDF + PNG label sheets |
 | Weekly learning report | `tools/learning_report.py` | Correlation-only report, no causal claims |
 
-LDS base URL used by HA: `http://a0d7b954-cordyceps-lds:8099` (add-on) or
-`http://<lab-host-ip>:8099` (docker). Configurable in HA via
+LDS base URL used by HA: `http://a0d7b954-cordyceps_lds:8099` (app, container
+port over the Docker network) or `http://<lab-host-ip>:8189` (docker, host port).
+HA uses the container port and is unaffected by host port conflicts.
+Configurable in HA via
 `input_text.lds_base_url` is NOT used — it is a single `secrets.yaml` key:
 `lds_base_url`. Auth: static bearer token from `secrets.yaml` key `lds_token`.
 
@@ -40,11 +42,11 @@ LDS base URL used by HA: `http://a0d7b954-cordyceps-lds:8099` (add-on) or
   - One token per Batch and per Jar. Stored in `scan_token` column.
   - This is the ONLY thing encoded in the QR payload.
 
-### QR payload (revised in v2.1 — see rationale)
+### QR payload (revised in v2.2 — see rationale)
 ```
-http://<LDS_HOST>:8099/s/<scan_token>
+http://<LDS_HOST>:8189/s/<scan_token>
 ```
-Default: `http://homeassistant.local:8099/s/<token>`
+Default: `http://homeassistant.local:8189/s/<token>`
 - Contains **no** strain, recipe, dates, weights, operator, or any lab data.
 - Token is opaque and resolvable to real data only by LDS, and only with the
   bearer token via `/resolve`.
@@ -54,7 +56,7 @@ Default: `http://homeassistant.local:8099/s/<token>`
   Home Assistant web server port user-editable and moved new HAOS installs off
   `:8123`. Embedding HA's host:port in the QR would mean that changing the HA
   address silently invalidates every label already stuck to a jar. Pointing at
-  the LDS (stable port 8099) turns an HA address change into a one-line option
+  the LDS turns an HA address change into a one-line option
   edit instead of a reprint.
 - Unknown tokens still redirect, so probing `/s/` reveals nothing about which
   tokens exist.

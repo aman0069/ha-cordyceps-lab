@@ -5,7 +5,7 @@
 # Do not add another file named config.yaml anywhere inside this folder.
 name: Cordyceps Lab Data Service
 slug: cordyceps_lds
-version: "2.1.1"
+version: "2.2.0"
 description: FastAPI and SQLite batch, jar, and stage tracking service for Cordyceps Lab v2
 url: https://github.com/aman0069/ha-cordyceps-lab
 
@@ -21,12 +21,29 @@ init: false
 startup: services
 boot: auto
 
+# PORT MAPPING: "<container port>/tcp: <host port>".
+#
+# The container keeps 8099 because that is the Home Assistant convention, and
+# nothing on the host can collide with a container-internal port. Home Assistant
+# itself reaches this service over the Docker network at
+# http://<slug-prefix>-cordyceps_lds:8099, so HA never needs the host port.
+#
+# The HOST port is deliberately 8189, NOT 8099. Port 8099 is the documented
+# default `ingress_port` for Home Assistant apps, which makes it the most
+# contested port in the ecosystem — Zigbee2MQTT pins its frontend to it, and the
+# SSH/Terminal and File Editor apps serve their UIs on it. Publishing 8099 on
+# the host is close to guaranteeing a conflict.
+#
+# The host port is ONLY needed so the lab tablet can follow a scanned QR label.
+# It is baked into every printed label, so treat it as permanent once you print
+# at scale. It can be changed in the app's Network section — see README section 3.
 ports:
-  8099/tcp: 8099
+  8099/tcp: 8189
 ports_description:
-  8099/tcp: Lab Data Service REST API and QR token redirect
+  8099/tcp: QR label redirect and REST API, reachable from the lab tablet
 
 # /health is unauthenticated on purpose so the Supervisor watchdog can poll it.
+# [PORT:8099] resolves to whichever host port is mapped above.
 watchdog: "http://[HOST]:[PORT:8099]/health"
 
 options:

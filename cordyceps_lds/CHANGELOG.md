@@ -1,5 +1,36 @@
 # Changelog
 
+## 2.2.0
+
+### Fixed
+- **App would not start: "port 8099 is already in use".** The host port mapping
+  was `8099:8099`. Port 8099 is the documented default `ingress_port` for Home
+  Assistant apps, which makes it the most contested port in the ecosystem —
+  Zigbee2MQTT pins its frontend to it, and SSH/Terminal and File Editor serve
+  their web UIs there. Publishing it on the host was close to guaranteeing a
+  collision. **The host port is now 8189.**
+
+  The container still listens on 8099, so nothing about how Home Assistant talks
+  to this app changes: HA uses the container port over the Docker network and is
+  unaffected by host port conflicts. The host port matters only for the lab
+  tablet following a scanned QR label.
+
+### Changed
+- **QR label payloads now use port 8189** (`http://<host>:8189/s/<token>`). The
+  sample sheet was regenerated and all 21 codes re-decoded to confirm.
+  The host port is encoded in every printed label, so settle it before printing
+  at scale — see README section 3.
+- `docker-compose.yml` publishes `8189:8099` to match.
+
+### Added
+- **`tools/check_port.py`** — run on the Home Assistant host before installing.
+  Reads the intended host port from `config.yaml`, checks whether it is free,
+  and names the process or container holding it, with a lookup table of common
+  Home Assistant ports so the culprit is identified rather than just reported.
+- CI guards: the host port may never be 8099, and the label generator's default
+  port must match the published host port — a mismatch there would silently
+  produce labels that resolve nowhere.
+
 ## 2.1.1
 
 ### Fixed

@@ -1,7 +1,8 @@
 # Cordyceps Lab Data Service
 
 Batch, jar, stage, and observation store for the Cordyceps militaris lab.
-FastAPI + SQLite. Listens on port 8099.
+FastAPI + SQLite. Listens on 8099 inside the container, published on host port
+8189 by default.
 
 Verified against HA Core 2026.8.3 / Supervisor 2026.07.5 / HAOS 18.2.
 
@@ -22,7 +23,7 @@ ha_base_url: "http://homeassistant.local:8123"
 
 ## Why `ha_base_url` matters
 
-Printed QR labels encode `http://<this-host>:8099/s/<token>` and nothing else.
+Printed QR labels encode `http://<this-host>:8189/s/<token>` and nothing else.
 This app then redirects to `<ha_base_url>/lab-scan?t=<token>`.
 
 Home Assistant 2026.8 made the web server port editable in the UI and moved new
@@ -65,11 +66,19 @@ Full API and data contract: `docs/CONTRACT.md` in the repository root.
 
 **Won't start, log says no API token set** — set `token` in Configuration.
 
-**Watchdog keeps restarting it** — check `http://<host>:8099/health` returns
+**Watchdog keeps restarting it** — check `http://<host>:8189/health` returns
 `{"status":"ok"}`. If the port is taken, change the host port mapping.
 
 **Scanning a label opens the wrong address** — `ha_base_url` is stale. Fix it
 here; do not reprint labels.
+
+**Cannot start, port is already in use** — another service already publishes the
+host port. Port 8099 in particular is the Home Assistant app ingress convention
+and is very often taken, which is why this app publishes 8189 instead. Run
+`python3 tools/check_port.py` from the Terminal & SSH app to see what holds it,
+then change the host port under Configuration -> Network. Home Assistant is
+unaffected; it uses the container port. Reprint labels only if you had already
+printed some, since the host port is encoded in each QR code.
 
 **Build fails on a Raspberry Pi** — this image is multi-arch and builds from
 `ghcr.io/home-assistant/base`. Make sure you are on Supervisor 2026.04.0 or

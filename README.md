@@ -40,6 +40,30 @@ else. Do not add another file named `config.yaml` anywhere in this repo.
    ```
 4. Start it. Enable **Start on boot** and **Watchdog**.
 
+### Ports
+
+| | Port | Conflicts? |
+|---|---|---|
+| Inside the container | `8099` | Never — container ports are private |
+| Published on the host | `8189` | Possible, check before installing |
+
+Home Assistant reaches the app over the Docker network on the container port, so
+HA never touches the host port. **The host port exists only so the lab tablet can
+follow a scanned QR label** — and it is encoded in every label you print.
+
+Before installing, from the **Terminal & SSH** app:
+```bash
+python3 tools/check_port.py
+```
+If it reports a conflict, change the host port in the app's **Configuration →
+Network** section, then re-run.
+
+> The host port is **not** 8099, deliberately. 8099 is the default `ingress_port`
+> for Home Assistant apps, so it is the most contested port in the ecosystem —
+> Zigbee2MQTT pins its frontend to it, and SSH/Terminal and File Editor serve
+> their UIs there. Publishing it on the host is asking for `port is already in
+> use`.
+
 The app builds on-device from `ghcr.io/home-assistant/base:3.24-2026.08.0`.
 
 **Supported architectures: `amd64` and `aarch64` only.** That is the full set the
@@ -88,7 +112,7 @@ affected by the 2026.6 removal of the legacy `platform: template` form.
 ## 3. Print labels
 
 ```bash
-python tools/make_labels.py --lds http://<host>:8099 --token XXX \
+python tools/make_labels.py --lds http://<host>:8189 --token XXX \
        --batch AC-20260821-01 --output sheet.pdf
 ```
 
@@ -96,9 +120,15 @@ Presets `a4_24up` (63.5 × 33.9 mm, Avery L7159) and `a4_65up_small`. Each sheet
 leads with a batch master label, then one per jar. Every rendered QR is decoded
 back from the page image before the file is written.
 
-**The QR encodes only** `http://<lds-host>:8099/s/<22-char opaque token>`. No
+**The QR encodes only** `http://<lds-host>:8189/s/<22-char opaque token>`. No
 strain, dates, recipe, weights, or operator. The app redirects that to
 `<ha_base_url>/lab-scan?t=<token>`.
+
+**Settle the host port before you print at scale.** The QR payload contains it,
+so changing the port later means every existing label stops resolving. Verify
+with `tools/check_port.py`, print one test sheet, scan it from the tablet, and
+only then print the rest. Changing `ha_base_url` afterwards is free; changing the
+port is not.
 
 > Labels are permanent; Home Assistant's port is not. HA 2026.8 made the web
 > server port editable in the UI and moved new HAOS installs off `:8123`. The

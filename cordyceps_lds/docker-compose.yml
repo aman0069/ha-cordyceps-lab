@@ -2,7 +2,7 @@ services:
   cordyceps-lds:
     build: .
     ports:
-      - "8099:8099"
+      - "8189:8099"
     environment:
       LDS_TOKEN: ${LDS_TOKEN:?Set LDS_TOKEN in your environment or .env file}
       LDS_DATA_DIR: /data
