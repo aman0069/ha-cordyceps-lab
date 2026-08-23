@@ -1,0 +1,17 @@
+[Unit]
+Description=Cordyceps Lab Data Service
+After=network.target
+
+[Service]
+Type=simple
+User=cordyceps
+WorkingDirectory=/opt/cordyceps-lds/addon
+Environment=LDS_TOKEN=replace-with-long-random-bearer-token
+Environment=LDS_DATA_DIR=/var/lib/cordyceps-lds
+Environment=TZ=Asia/Kolkata
+ExecStart=/usr/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8099
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

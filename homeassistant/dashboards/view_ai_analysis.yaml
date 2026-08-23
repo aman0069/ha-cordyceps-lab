@@ -1,0 +1,117 @@
+title: AI & Analysis
+path: cm2-ai-analysis
+icon: mdi:chart-box-outline
+type: masonry
+cards:
+  - type: markdown
+    content: >
+      ## AI & analysis
+      This view is observational. It presents LDS records, completeness, and
+      comparisons; it does not change setpoints.
+
+  - type: custom:apexcharts-card
+    header:
+      title: Yield trend by harvest date
+      show: true
+    graph_span: 180d
+    series:
+      - entity: sensor.cm2_yield_trend_dry_weight_g # EDIT_ME: LDS harvest-yield time-series sensor.
+        name: Dry weight (g)
+        type: column
+        color: "#20808D"
+      - entity: sensor.cm2_yield_trend_be_pct # EDIT_ME: LDS biological-efficiency time-series sensor; keep NULL when unknown.
+        name: Biological efficiency (%)
+        type: line
+        color: "#DA7101"
+
+  - type: custom:apexcharts-card
+    header:
+      title: Contamination rate over time
+      show: true
+    graph_span: 180d
+    series:
+      - entity: sensor.cm2_contamination_rate_pct # EDIT_ME: LDS period contamination-rate sensor.
+        name: Contamination rate (%)
+        type: line
+        color: "#A13544"
+
+  - type: custom:apexcharts-card
+    header:
+      title: Stage-duration comparison
+      show: true
+    chart_type: bar
+    series:
+      - entity: sensor.cm2_duration_inoculation_to_transfer_h # EDIT_ME: LDS stage-duration comparison sensor.
+        name: Inoculation → transfer (h)
+        type: column
+        color: "#20808D"
+      - entity: sensor.cm2_duration_transfer_to_primordia_h # EDIT_ME: LDS stage-duration comparison sensor.
+        name: Transfer → primordia (h)
+        type: column
+        color: "#A84B2F"
+      - entity: sensor.cm2_duration_primordia_to_harvest_h # EDIT_ME: LDS stage-duration comparison sensor.
+        name: Primordia → harvest (h)
+        type: column
+        color: "#7A39BB"
+
+  - type: entities
+    title: Environmental stage summaries
+    entities:
+      - entity: sensor.cm2_env_dark_temp_summary # EDIT_ME: LDS env_stage_summary text sensor; include n_samples/n_expected/completeness.
+        name: Dark incubation temperature
+      - entity: sensor.cm2_env_dark_rh_summary # EDIT_ME: LDS env_stage_summary text sensor; include n_samples/n_expected/completeness.
+        name: Dark incubation RH
+      - entity: sensor.cm2_env_light_temp_summary # EDIT_ME: LDS env_stage_summary text sensor; include n_samples/n_expected/completeness.
+        name: Light-stage temperature
+      - entity: sensor.cm2_env_light_co2_summary # EDIT_ME: LDS env_stage_summary text sensor; include n_samples/n_expected/completeness.
+        name: Light-stage CO₂
+
+  - type: custom:apexcharts-card
+    header:
+      title: Per-batch data completeness
+      show: true
+    chart_type: radialBar
+    series:
+      - entity: sensor.cm2_completeness_batch_1 # EDIT_ME: LDS per-batch completeness score, 0–100.
+        name: Batch 1
+        type: column
+      - entity: sensor.cm2_completeness_batch_2 # EDIT_ME: LDS per-batch completeness score, 0–100.
+        name: Batch 2
+        type: column
+      - entity: sensor.cm2_completeness_batch_3 # EDIT_ME: LDS per-batch completeness score, 0–100.
+        name: Batch 3
+        type: column
+
+  - type: entities
+    title: Batch comparison filters
+    show_header_toggle: false
+    entities:
+      - entity: input_select.cm2_strain
+        name: Strain
+      - entity: input_select.cm2_recipe_version
+        name: Recipe version
+      - entity: input_select.cm2_dest_chamber
+        name: Chamber
+      - entity: input_text.cm2_rack_shelf
+        name: Shelf
+      - entity: input_number.cm2_compare_transfer_age_min_h # EDIT_ME: comparison filter helper missing from CONTRACT §6.
+        name: Transfer timing minimum (h)
+      - entity: input_number.cm2_compare_transfer_age_max_h # EDIT_ME: comparison filter helper missing from CONTRACT §6.
+        name: Transfer timing maximum (h)
+      - entity: input_number.cm2_compare_temp_min_c # EDIT_ME: comparison filter helper missing from CONTRACT §6.
+        name: Temperature range minimum (°C)
+      - entity: input_number.cm2_compare_temp_max_c # EDIT_ME: comparison filter helper missing from CONTRACT §6.
+        name: Temperature range maximum (°C)
+      - entity: input_number.cm2_compare_yield_min_g # EDIT_ME: comparison filter helper missing from CONTRACT §6.
+        name: Yield range minimum (g)
+      - entity: input_number.cm2_compare_yield_max_g # EDIT_ME: comparison filter helper missing from CONTRACT §6.
+        name: Yield range maximum (g)
+
+  - type: custom:mushroom-template-card
+    entity: input_select.cm2_strain
+    primary: Run filtered batch comparison
+    secondary: LDS comparison filters are ready for review; no operational setting is changed.
+    icon: mdi:chart-timeline-variant-shimmer
+    icon_color: teal
+    tap_action:
+      action: more-info

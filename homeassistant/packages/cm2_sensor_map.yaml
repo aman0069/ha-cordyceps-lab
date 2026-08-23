@@ -1,0 +1,233 @@
+# =============================================================================
+# CORDYCEPS LAB v2 — CHAMBER SENSOR MAP
+# File: /config/packages/cm2_sensor_map.yaml
+#
+# This is the ONLY file in v2 where physical HA entity IDs are edited.
+# Replace every value marked EDIT_ME with the real entity_id for that chamber.
+# Set a field to the unquoted scalar none when no sensor or device exists.
+# The payload script deliberately sends null + "missing" for none, unknown,
+# unavailable, or empty readings. It never falls back to zero or stale data.
+# =============================================================================
+
+script:
+  cm2_env_payload:
+    alias: "CM2 · Build environment snapshot payload"
+    description: "Returns env with *_src flags; accepts chamber=dark_room|light_room|fruit_1|fruit_2|drying|lab."
+    icon: mdi:chart-box-outline
+    mode: parallel
+    max: 20
+    fields:
+      chamber:
+        description: "One of dark_room, light_room, fruit_1, fruit_2, drying, lab"
+        required: true
+        selector:
+          select:
+            options:
+              - dark_room
+              - light_room
+              - fruit_1
+              - fruit_2
+              - drying
+              - lab
+    sequence:
+      - variables:
+          # ---- dark_room: edit every entity value on the right ----------------
+          dark_room_temperature_entity: &cm2_dark_room_temperature sensor.dark_room_temperature # EDIT_ME
+          dark_room_humidity_entity: &cm2_dark_room_humidity sensor.dark_room_humidity # EDIT_ME
+          dark_room_co2_entity: &cm2_dark_room_co2 sensor.dark_room_co2 # EDIT_ME
+          dark_room_lux_entity: &cm2_dark_room_lux sensor.dark_room_illuminance # EDIT_ME
+          dark_room_light_entity: &cm2_dark_room_light switch.dark_room_light # EDIT_ME
+          dark_room_door_entity: &cm2_dark_room_door binary_sensor.dark_room_door # EDIT_ME
+          dark_room_fan_entity: &cm2_dark_room_fan switch.dark_room_fan # EDIT_ME
+          dark_room_humidifier_entity: &cm2_dark_room_humidifier switch.dark_room_humidifier # EDIT_ME
+          dark_room_exhaust_entity: &cm2_dark_room_exhaust switch.dark_room_exhaust # EDIT_ME
+          dark_room_airflow_entity: &cm2_dark_room_airflow sensor.dark_room_airflow # EDIT_ME
+
+          # ---- light_room ------------------------------------------------------
+          light_room_temperature_entity: &cm2_light_room_temperature sensor.light_room_temperature # EDIT_ME
+          light_room_humidity_entity: &cm2_light_room_humidity sensor.light_room_humidity # EDIT_ME
+          light_room_co2_entity: &cm2_light_room_co2 sensor.light_room_co2 # EDIT_ME
+          light_room_lux_entity: &cm2_light_room_lux sensor.light_room_illuminance # EDIT_ME
+          light_room_light_entity: &cm2_light_room_light switch.light_room_light # EDIT_ME
+          light_room_door_entity: &cm2_light_room_door binary_sensor.light_room_door # EDIT_ME
+          light_room_fan_entity: &cm2_light_room_fan switch.light_room_fan # EDIT_ME
+          light_room_humidifier_entity: &cm2_light_room_humidifier switch.light_room_humidifier # EDIT_ME
+          light_room_exhaust_entity: &cm2_light_room_exhaust switch.light_room_exhaust # EDIT_ME
+          light_room_airflow_entity: &cm2_light_room_airflow sensor.light_room_airflow # EDIT_ME
+
+          # ---- fruit_1 ---------------------------------------------------------
+          fruit_1_temperature_entity: &cm2_fruit_1_temperature sensor.fruit_1_temperature # EDIT_ME
+          fruit_1_humidity_entity: &cm2_fruit_1_humidity sensor.fruit_1_humidity # EDIT_ME
+          fruit_1_co2_entity: &cm2_fruit_1_co2 sensor.fruit_1_co2 # EDIT_ME
+          fruit_1_lux_entity: &cm2_fruit_1_lux sensor.fruit_1_illuminance # EDIT_ME
+          fruit_1_light_entity: &cm2_fruit_1_light switch.fruit_1_light # EDIT_ME
+          fruit_1_door_entity: &cm2_fruit_1_door binary_sensor.fruit_1_door # EDIT_ME
+          fruit_1_fan_entity: &cm2_fruit_1_fan switch.fruit_1_fan # EDIT_ME
+          fruit_1_humidifier_entity: &cm2_fruit_1_humidifier switch.fruit_1_humidifier # EDIT_ME
+          fruit_1_exhaust_entity: &cm2_fruit_1_exhaust switch.fruit_1_exhaust # EDIT_ME
+          fruit_1_airflow_entity: &cm2_fruit_1_airflow sensor.fruit_1_airflow # EDIT_ME
+
+          # ---- fruit_2 ---------------------------------------------------------
+          fruit_2_temperature_entity: &cm2_fruit_2_temperature sensor.fruit_2_temperature # EDIT_ME
+          fruit_2_humidity_entity: &cm2_fruit_2_humidity sensor.fruit_2_humidity # EDIT_ME
+          fruit_2_co2_entity: &cm2_fruit_2_co2 sensor.fruit_2_co2 # EDIT_ME
+          fruit_2_lux_entity: &cm2_fruit_2_lux sensor.fruit_2_illuminance # EDIT_ME
+          fruit_2_light_entity: &cm2_fruit_2_light switch.fruit_2_light # EDIT_ME
+          fruit_2_door_entity: &cm2_fruit_2_door binary_sensor.fruit_2_door # EDIT_ME
+          fruit_2_fan_entity: &cm2_fruit_2_fan switch.fruit_2_fan # EDIT_ME
+          fruit_2_humidifier_entity: &cm2_fruit_2_humidifier switch.fruit_2_humidifier # EDIT_ME
+          fruit_2_exhaust_entity: &cm2_fruit_2_exhaust switch.fruit_2_exhaust # EDIT_ME
+          fruit_2_airflow_entity: &cm2_fruit_2_airflow sensor.fruit_2_airflow # EDIT_ME
+
+          # ---- drying ----------------------------------------------------------
+          drying_temperature_entity: &cm2_drying_temperature sensor.drying_temperature # EDIT_ME
+          drying_humidity_entity: &cm2_drying_humidity sensor.drying_humidity # EDIT_ME
+          drying_co2_entity: &cm2_drying_co2 none # EDIT_ME
+          drying_lux_entity: &cm2_drying_lux sensor.drying_illuminance # EDIT_ME
+          drying_light_entity: &cm2_drying_light switch.drying_light # EDIT_ME
+          drying_door_entity: &cm2_drying_door binary_sensor.drying_door # EDIT_ME
+          drying_fan_entity: &cm2_drying_fan switch.drying_fan # EDIT_ME
+          drying_humidifier_entity: &cm2_drying_humidifier none # EDIT_ME
+          drying_exhaust_entity: &cm2_drying_exhaust switch.drying_exhaust # EDIT_ME
+          drying_airflow_entity: &cm2_drying_airflow sensor.drying_airflow # EDIT_ME
+
+          # ---- lab -------------------------------------------------------------
+          lab_temperature_entity: &cm2_lab_temperature sensor.lab_temperature # EDIT_ME
+          lab_humidity_entity: &cm2_lab_humidity sensor.lab_humidity # EDIT_ME
+          lab_co2_entity: &cm2_lab_co2 sensor.lab_co2 # EDIT_ME
+          lab_lux_entity: &cm2_lab_lux sensor.lab_illuminance # EDIT_ME
+          lab_light_entity: &cm2_lab_light switch.lab_light # EDIT_ME
+          lab_door_entity: &cm2_lab_door binary_sensor.lab_door # EDIT_ME
+          lab_fan_entity: &cm2_lab_fan switch.lab_fan # EDIT_ME
+          lab_humidifier_entity: &cm2_lab_humidifier none # EDIT_ME
+          lab_exhaust_entity: &cm2_lab_exhaust switch.lab_exhaust # EDIT_ME
+          lab_airflow_entity: &cm2_lab_airflow sensor.lab_airflow # EDIT_ME
+
+          # The aliases above keep all physical entity IDs together and input_text-free.
+          cm2_sensor_map: &cm2_sensor_map
+            dark_room:
+              temperature: *cm2_dark_room_temperature
+              humidity: *cm2_dark_room_humidity
+              co2: *cm2_dark_room_co2
+              lux: *cm2_dark_room_lux
+              light: *cm2_dark_room_light
+              door: *cm2_dark_room_door
+              fan: *cm2_dark_room_fan
+              humidifier: *cm2_dark_room_humidifier
+              exhaust: *cm2_dark_room_exhaust
+              airflow: *cm2_dark_room_airflow
+            light_room:
+              temperature: *cm2_light_room_temperature
+              humidity: *cm2_light_room_humidity
+              co2: *cm2_light_room_co2
+              lux: *cm2_light_room_lux
+              light: *cm2_light_room_light
+              door: *cm2_light_room_door
+              fan: *cm2_light_room_fan
+              humidifier: *cm2_light_room_humidifier
+              exhaust: *cm2_light_room_exhaust
+              airflow: *cm2_light_room_airflow
+            fruit_1:
+              temperature: *cm2_fruit_1_temperature
+              humidity: *cm2_fruit_1_humidity
+              co2: *cm2_fruit_1_co2
+              lux: *cm2_fruit_1_lux
+              light: *cm2_fruit_1_light
+              door: *cm2_fruit_1_door
+              fan: *cm2_fruit_1_fan
+              humidifier: *cm2_fruit_1_humidifier
+              exhaust: *cm2_fruit_1_exhaust
+              airflow: *cm2_fruit_1_airflow
+            fruit_2:
+              temperature: *cm2_fruit_2_temperature
+              humidity: *cm2_fruit_2_humidity
+              co2: *cm2_fruit_2_co2
+              lux: *cm2_fruit_2_lux
+              light: *cm2_fruit_2_light
+              door: *cm2_fruit_2_door
+              fan: *cm2_fruit_2_fan
+              humidifier: *cm2_fruit_2_humidifier
+              exhaust: *cm2_fruit_2_exhaust
+              airflow: *cm2_fruit_2_airflow
+            drying:
+              temperature: *cm2_drying_temperature
+              humidity: *cm2_drying_humidity
+              co2: *cm2_drying_co2
+              lux: *cm2_drying_lux
+              light: *cm2_drying_light
+              door: *cm2_drying_door
+              fan: *cm2_drying_fan
+              humidifier: *cm2_drying_humidifier
+              exhaust: *cm2_drying_exhaust
+              airflow: *cm2_drying_airflow
+            lab:
+              temperature: *cm2_lab_temperature
+              humidity: *cm2_lab_humidity
+              co2: *cm2_lab_co2
+              lux: *cm2_lab_lux
+              light: *cm2_lab_light
+              door: *cm2_lab_door
+              fan: *cm2_lab_fan
+              humidifier: *cm2_lab_humidifier
+              exhaust: *cm2_lab_exhaust
+              airflow: *cm2_lab_airflow
+          selected_chamber: "{{ chamber if chamber in cm2_sensor_map else 'lab' }}"
+          selected_map: "{{ cm2_sensor_map[selected_chamber] }}"
+          temp_entity: "{{ selected_map.temperature }}"
+          rh_entity: "{{ selected_map.humidity }}"
+          co2_entity: "{{ selected_map.co2 }}"
+          lux_entity: "{{ selected_map.lux }}"
+          light_entity: "{{ selected_map.light }}"
+          door_entity: "{{ selected_map.door }}"
+          fan_entity: "{{ selected_map.fan }}"
+          humidifier_entity: "{{ selected_map.humidifier }}"
+          exhaust_entity: "{{ selected_map.exhaust }}"
+          airflow_entity: "{{ selected_map.airflow }}"
+          temp_raw: "{{ none if temp_entity in [none, 'none', ''] else states(temp_entity) }}"
+          rh_raw: "{{ none if rh_entity in [none, 'none', ''] else states(rh_entity) }}"
+          co2_raw: "{{ none if co2_entity in [none, 'none', ''] else states(co2_entity) }}"
+          lux_raw: "{{ none if lux_entity in [none, 'none', ''] else states(lux_entity) }}"
+          light_raw: "{{ none if light_entity in [none, 'none', ''] else states(light_entity) }}"
+          door_raw: "{{ none if door_entity in [none, 'none', ''] else states(door_entity) }}"
+          fan_raw: "{{ none if fan_entity in [none, 'none', ''] else states(fan_entity) }}"
+          humidifier_raw: "{{ none if humidifier_entity in [none, 'none', ''] else states(humidifier_entity) }}"
+          exhaust_raw: "{{ none if exhaust_entity in [none, 'none', ''] else states(exhaust_entity) }}"
+          airflow_raw: "{{ none if airflow_entity in [none, 'none', ''] else states(airflow_entity) }}"
+          temp_valid: "{{ temp_raw not in [none, 'none', 'unknown', 'unavailable', ''] and is_number(temp_raw) }}"
+          rh_valid: "{{ rh_raw not in [none, 'none', 'unknown', 'unavailable', ''] and is_number(rh_raw) }}"
+          co2_valid: "{{ co2_raw not in [none, 'none', 'unknown', 'unavailable', ''] and is_number(co2_raw) }}"
+          lux_valid: "{{ lux_raw not in [none, 'none', 'unknown', 'unavailable', ''] and is_number(lux_raw) }}"
+          airflow_valid: "{{ airflow_raw not in [none, 'none', 'unknown', 'unavailable', ''] and is_number(airflow_raw) }}"
+          light_valid: "{{ light_raw in ['on', 'off'] }}"
+          door_valid: "{{ door_raw in ['on', 'off', 'open', 'closed'] }}"
+          fan_valid: "{{ fan_raw in ['on', 'off'] }}"
+          humidifier_valid: "{{ humidifier_raw in ['on', 'off'] }}"
+          exhaust_valid: "{{ exhaust_raw in ['on', 'off'] }}"
+          env: >-
+            {% set t = temp_raw | float(none) if temp_valid else none %}
+            {% set rh = rh_raw | float(none) if rh_valid else none %}
+            {% set vpd = (0.6108 * (2.718281828 ** ((17.27 * t) / (t + 237.3))) * (1 - rh / 100)) if t is not none and rh is not none else none %}
+            {{ {
+              'chamber': selected_chamber,
+              'temp_c': t, 'temp_c_src': 'sensor' if t is not none else 'missing',
+              'rh_pct': rh, 'rh_pct_src': 'sensor' if rh is not none else 'missing',
+              'co2_ppm': co2_raw | float(none) if co2_valid else none, 'co2_ppm_src': 'sensor' if co2_valid else 'missing',
+              'vpd_kpa': vpd | round(3) if vpd is not none else none, 'vpd_kpa_src': 'sensor' if vpd is not none else 'missing',
+              'light_state': light_raw if light_valid else none, 'light_state_src': 'sensor' if light_valid else 'missing',
+              'lux': lux_raw | float(none) if lux_valid else none, 'lux_src': 'sensor' if lux_valid else 'missing',
+              'photoperiod': none, 'photoperiod_src': 'missing',
+              'door_state': ('open' if door_raw in ['on', 'open'] else 'closed') if door_valid else none, 'door_state_src': 'sensor' if door_valid else 'missing',
+              'fan_state': fan_raw if fan_valid else none, 'fan_state_src': 'sensor' if fan_valid else 'missing',
+              'humidifier_state': humidifier_raw if humidifier_valid else none, 'humidifier_state_src': 'sensor' if humidifier_valid else 'missing',
+              'exhaust_state': exhaust_raw if exhaust_valid else none, 'exhaust_state_src': 'sensor' if exhaust_valid else 'missing',
+              'airflow_ms': airflow_raw | float(none) if airflow_valid else none, 'airflow_ms_src': 'sensor' if airflow_valid else 'missing',
+              'raw_json': {
+                'captured_ts': now().isoformat(), 'chamber': selected_chamber,
+                'entities': selected_map,
+                'states': {'temperature': temp_raw, 'humidity': rh_raw, 'co2': co2_raw, 'lux': lux_raw, 'light': light_raw, 'door': door_raw, 'fan': fan_raw, 'humidifier': humidifier_raw, 'exhaust': exhaust_raw, 'airflow': airflow_raw}
+              } | tojson
+            } }}
+          cm2_env_response:
+            env: "{{ env }}"
+      - stop: "Environment snapshot payload built."
+        response_variable: cm2_env_response

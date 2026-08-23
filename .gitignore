@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Runtime data — never commit lab records or the SQLite databases.
+data/
+*.db
+*.db-wal
+*.db-shm
+cordyceps_lds/data/
+
+# Generated label sheets and reports (samples/ is committed deliberately)
+/labels_*.pdf
+/labels_*.png
+/report_*.md
+
+# Secrets
+.env
+secrets.yaml

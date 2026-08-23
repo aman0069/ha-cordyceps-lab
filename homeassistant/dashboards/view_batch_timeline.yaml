@@ -1,0 +1,142 @@
+title: Batch Timeline
+path: cm2-batch-timeline
+icon: mdi:timeline-clock-outline
+type: masonry
+cards:
+  - type: markdown
+    content: >
+      ## Batch timeline
+      Scan a batch or jar first. The scan safeguard only resolves a record; it
+      does not write an event.
+
+  - type: custom:mushroom-template-card
+    entity: input_text.cm2_selected_id
+    primary: "{{ states('input_text.cm2_selected_name') or 'No batch selected' }}"
+    secondary: >
+      ID: {{ states('input_text.cm2_selected_id') }} · Current stage:
+      {{ states('sensor.cm2_selected_batch_stage') }}
+    icon: mdi:barcode-scan
+    icon_color: teal
+    tap_action:
+      action: call-service
+      service: script.turn_on
+      target:
+        entity_id: script.cm2_resolve_scan
+
+  - type: custom:mushroom-chips-card
+    alignment: justify
+    chips:
+      - type: template
+        content: Autoclaved
+        icon: mdi:pressure-gauge
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'autoclaved' %}teal{% else %}grey{% endif %}
+      - type: template
+        content: Inoculated
+        icon: mdi:needle
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'inoculated' %}teal{% else %}grey{% endif %}
+      - type: template
+        content: Dark incubation
+        icon: mdi:weather-night
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'dark_incubation' %}teal{% else %}grey{% endif %}
+      - type: template
+        content: Light
+        icon: mdi:weather-sunny
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'transferred_to_light' %}teal{% else %}grey{% endif %}
+      - type: template
+        content: Primordia
+        icon: mdi:sprout
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'primordia_observed' %}teal{% else %}grey{% endif %}
+      - type: template
+        content: Fruiting
+        icon: mdi:mushroom
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'fruiting' %}teal{% else %}grey{% endif %}
+      - type: template
+        content: Harvested
+        icon: mdi:scale
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'harvested' %}teal{% else %}grey{% endif %}
+      - type: template
+        content: Dried
+        icon: mdi:weather-sunny-alert
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'dried' %}teal{% else %}grey{% endif %}
+      - type: template
+        content: Packaged
+        icon: mdi:package-variant-closed
+        icon_color: >
+          {% if states('sensor.cm2_selected_batch_stage') == 'packaged' %}teal{% else %}grey{% endif %}
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: picture
+        image: /local/cordyceps/selected_qr_label.png # EDIT_ME: export the selected record's label thumbnail here.
+        alt_text: Selected batch or jar QR label thumbnail
+      - type: entities
+        title: Location
+        entities:
+          - entity: sensor.cm2_selected_location # EDIT_ME: LDS-derived selected-record location sensor.
+            name: Chamber / location
+          - entity: sensor.cm2_selected_rack_shelf # EDIT_ME: LDS-derived selected-record rack/shelf sensor.
+            name: Rack / shelf
+
+  - type: entities
+    title: Key timestamps
+    entities:
+      - entity: sensor.cm2_selected_autoclave_ts # EDIT_ME: LDS-derived selected batch timestamp sensor.
+        name: Autoclave
+      - entity: sensor.cm2_selected_inoculation_ts # EDIT_ME: LDS-derived selected batch timestamp sensor.
+        name: Inoculation
+      - entity: sensor.cm2_selected_transfer_ts # EDIT_ME: LDS-derived selected batch timestamp sensor.
+        name: Transfer dark → light
+      - entity: sensor.cm2_selected_primordia_ts # EDIT_ME: LDS-derived selected batch timestamp sensor.
+        name: Primordia
+      - entity: sensor.cm2_selected_harvest_ts # EDIT_ME: LDS-derived selected batch timestamp sensor.
+        name: Harvest
+
+  - type: custom:mushroom-template-card
+    entity: sensor.cm2_selected_upcoming_tasks # EDIT_ME: LDS-derived upcoming-task summary sensor.
+    primary: Upcoming tasks
+    secondary: "{{ states('sensor.cm2_selected_upcoming_tasks') }}" # EDIT_ME: same LDS-derived upcoming-task summary sensor.
+    icon: mdi:calendar-clock
+    icon_color: amber
+
+  - type: picture
+    image: /local/cordyceps/selected_latest_photo.jpg # EDIT_ME: LDS latest-photo URL for selected batch.
+    alt_text: Latest photo for selected batch or jar
+
+  - type: custom:apexcharts-card
+    header:
+      title: Environmental history during the selected stage windows
+      show: true
+    graph_span: 30d
+    now:
+      show: true
+    yaxis:
+      - id: temperature
+        decimals: 1
+      - id: humidity
+        opposite: true
+        decimals: 0
+    series:
+      - entity: sensor.cm2_selected_stage_temp_c # EDIT_ME: stage-window temperature history from LDS/raw sensors.
+        name: Temperature °C
+        yaxis_id: temperature
+        type: line
+        color: "#20808D"
+      - entity: sensor.cm2_selected_stage_rh_pct # EDIT_ME: stage-window RH history from LDS/raw sensors.
+        name: RH %
+        yaxis_id: humidity
+        type: line
+        color: "#DA7101"
+      - entity: sensor.cm2_selected_stage_co2_ppm # EDIT_ME: stage-window CO₂ history from LDS/raw sensors.
+        name: CO₂ ppm
+        type: line
+        color: "#7A39BB"

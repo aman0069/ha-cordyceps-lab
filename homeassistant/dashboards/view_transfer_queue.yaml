@@ -1,0 +1,139 @@
+title: Transfer Queue
+path: cm2-transfer-queue
+icon: mdi:tray-arrow-right
+type: masonry
+cards:
+  - type: markdown
+    content: >
+      ## Dark incubation review queue
+      Batches are ordered oldest first. Orange means at or beyond the configured
+      review window; the displayed age remains an LDS-derived value.
+
+  - type: custom:mushroom-template-card
+    entity: sensor.cm2_transfer_queue_count
+    primary: "{{ states('sensor.cm2_transfer_queue_count') }} dark-incubation batch(es) awaiting review"
+    secondary: > # EDIT_ME: task-required helper absent from CONTRACT §6.
+      Review window: {{ states('input_number.cm2_review_window_days') }} days
+    icon: mdi:weather-night
+    icon_color: amber
+    multiline_secondary: true
+    # EDIT_ME: input_number.cm2_review_window_days is task-required but absent
+    # from CONTRACT §6. Add it to the authoritative package contract before deployment.
+
+  - type: custom:auto-entities
+    # EDIT_ME: expose one LDS-derived sensor per dark_incubation batch, with
+    # attributes batch_id, incubation_age_days, strain, location, and sort_age.
+    filter:
+      include:
+        - entity_id: sensor.cm2_dark_incubation_batch_* # EDIT_ME: LDS-derived queue-row sensors.
+    sort:
+      method: attribute
+      attribute: sort_age
+      reverse: true
+    card:
+      type: entities
+      title: Oldest dark-incubation batches first
+      show_header_toggle: false
+    # EDIT_ME: use a Mushroom/auto-entities row template in the deployed
+    # dashboard to show age in days and set amber when age >= review window.
+
+  - type: custom:mushroom-template-card
+    entity: input_select.cm2_pending_action
+    primary: Transfer Dark → Light
+    secondary: Tap to open the required transfer form. No event is committed here.
+    icon: mdi:tray-arrow-right
+    icon_color: teal
+    multiline_secondary: true
+    tap_action:
+      action: call-service
+      service: input_select.select_option
+      target:
+        entity_id: input_select.cm2_pending_action
+      data:
+        option: transfer_dark_to_light
+    card_mod:
+      style: |
+        ha-card {
+          min-height: 128px;
+          --primary-text-color: #01696F;
+        }
+        .primary {
+          font-size: 30px !important;
+          font-weight: 700 !important;
+        }
+    # EDIT_ME: card-mod is used only to guarantee the ≥120px tablet touch target.
+
+  - type: conditional
+    conditions:
+      - entity: input_select.cm2_pending_action
+        state: transfer_dark_to_light
+    card:
+      type: vertical-stack
+      cards:
+        - type: markdown
+          content: >
+            ### Transfer Dark → Light form
+            All fields below are required by the LDS transfer endpoint. Resolve
+            a scan first; scan alone never commits an event.
+        - type: entities
+          entities:
+            - entity: input_text.cm2_selected_id
+              name: Batch ID or selected jar ID
+            - entity: input_datetime.cm2_event_ts
+              name: Event timestamp
+            - entity: input_select.cm2_operator
+              name: Operator
+            - entity: input_select.cm2_source_location
+              name: Source location
+            - entity: input_select.cm2_dest_chamber
+              name: Destination chamber
+            - entity: input_text.cm2_rack_shelf
+              name: Rack / shelf
+            - entity: input_text.cm2_reason
+              name: Reason
+            - entity: input_number.cm2_colonization_pct
+              name: Colonization %
+            - entity: input_select.cm2_moisture_level
+              name: Moisture level
+            - entity: input_text.cm2_notes
+              name: Notes (optional)
+        - type: custom:mushroom-template-card
+          entity: script.cm2_env_payload
+          primary: Build the required environmental snapshot
+          secondary: Uses the package sensor map and preserves missing readings as NULL/missing.
+          icon: mdi:thermometer-lines
+          tap_action:
+            action: call-service
+            service: script.turn_on
+            target:
+              entity_id: script.cm2_env_payload
+        - type: conditional
+          conditions:
+            - entity: input_boolean.cm2_scan_confirm_armed
+              state: "on"
+          card:
+            type: custom:mushroom-template-card
+            entity: input_text.cm2_selected_name
+            primary: "Confirm transfer for {{ states('input_text.cm2_selected_name') }}"
+            secondary: >
+              Confirmation is armed. This is the only control that invokes the
+              contract safeguard/commit script.
+            icon: mdi:check-decagram
+            icon_color: amber
+            multiline_secondary: true
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              target:
+                entity_id: script.cm2_confirm_and_commit
+        - type: conditional
+          conditions:
+            - entity: input_boolean.cm2_scan_confirm_armed
+              state: "off"
+          card:
+            type: custom:mushroom-template-card
+            entity: input_boolean.cm2_scan_confirm_armed
+            primary: Confirmation not armed
+            secondary: Resolve and review the selected record, then arm confirmation before commit.
+            icon: mdi:shield-lock-outline
+            icon_color: grey

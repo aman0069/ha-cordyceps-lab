@@ -1,0 +1,171 @@
+{
+  "batch": {
+    "batch_id": "AC-20260821-01",
+    "scan_token": "Vg8C_IckD6ndyx9EHpvxFw",
+    "strain": "CM-Comm-A",
+    "inoculation_date": "2026-08-22",
+    "transfer_date": ""
+  },
+  "jars": [
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J001",
+      "scan_token": "CwJkCaeUtmCi0hCZxLGh3w",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J002",
+      "scan_token": "Ha4veQHN87cIGzcvDXqq2g",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J003",
+      "scan_token": "Vcom5Y93GkOE93bcCNCQ1A",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J004",
+      "scan_token": "5oLMKlP79aaXNqNb9rk_fA",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J005",
+      "scan_token": "oFM1PYANw31L7YJQ0XqpHQ",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J006",
+      "scan_token": "11hqg4Ig0vQd7SAL8T5LMg",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J007",
+      "scan_token": "SMZ_hsTFmaPkOxoOUPwAMw",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J008",
+      "scan_token": "x1YF-6nGc4P7l_-ras7sgQ",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J009",
+      "scan_token": "VK7pX51ZRbAPH55A_SS54w",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J010",
+      "scan_token": "AoN7-UGv579HJtXYfPD4Hg",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J011",
+      "scan_token": "HzU_8qVI5MhGwcf1f9FVmg",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J012",
+      "scan_token": "MIHGuYX73rantqt2lwDvsw",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J013",
+      "scan_token": "6yfsy7UG_RO0RIdIKSeQZA",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J014",
+      "scan_token": "cSP_D9LSV7pjkxWMgL5IWA",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J015",
+      "scan_token": "O_UsVs9As_m-uTkmEZySoA",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J016",
+      "scan_token": "xx2diA5uR7MbXhe3Pldajg",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J017",
+      "scan_token": "IeTsh1c3rtyKV3Rh2HWeDw",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J018",
+      "scan_token": "NWuPtMoa32yie5BUoMHrHg",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J019",
+      "scan_token": "aLctdfsvdSswYAf23Le0Vg",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    },
+    {
+      "batch_id": "AC-20260821-01",
+      "jar_id": "AC-20260821-01-J020",
+      "scan_token": "RVUkCtJ2tP_o58qQ6TCaKw",
+      "strain": "CM-Comm-A",
+      "inoculation_date": "2026-08-22",
+      "transfer_date": ""
+    }
+  ]
+}

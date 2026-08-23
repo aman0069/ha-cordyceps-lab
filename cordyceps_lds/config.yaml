@@ -1,0 +1,47 @@
+# Cordyceps Lab Data Service — App (add-on) configuration
+# Verified against: HA Core 2026.8.3 / Supervisor 2026.07.5 / HAOS 18.2
+#
+# NOTE: Supervisor recursively searches an app repository for `config.yaml`.
+# Do not add another file named config.yaml anywhere inside this folder.
+name: Cordyceps Lab Data Service
+slug: cordyceps_lds
+version: "2.1.0"
+description: FastAPI and SQLite batch, jar, and stage tracking service for Cordyceps Lab v2
+url: https://github.com/local/cordyceps-lab-v2
+
+# Build on whatever the host actually is. HAOS 18.2 runs on both amd64 and
+# aarch64 hardware; listing only amd64 previously made this uninstallable on Pi.
+arch:
+  - amd64
+  - aarch64
+  - armv7
+  - armhf
+  - i386
+
+# Required for S6 Overlay v3 base images — the app will not start if this is true.
+init: false
+startup: services
+boot: auto
+
+ports:
+  8099/tcp: 8099
+ports_description:
+  8099/tcp: Lab Data Service REST API and QR token redirect
+
+# /health is unauthenticated on purpose so the Supervisor watchdog can poll it.
+watchdog: "http://[HOST]:[PORT:8099]/health"
+
+options:
+  token: ""
+  timezone: Asia/Kolkata
+  ha_base_url: "http://homeassistant.local:8123"
+schema:
+  token: str
+  timezone: str
+  # Where /s/<token> redirects the tablet. Change this here — never on the
+  # printed labels — if the Home Assistant web server port ever changes.
+  ha_base_url: str
+
+map:
+  - config:rw
+  - share:rw

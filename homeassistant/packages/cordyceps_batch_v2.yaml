@@ -1,0 +1,1166 @@
+# =============================================================================
+# CORDYCEPS LAB v2 — BATCH & LDS PACKAGE
+# File: /config/packages/cordyceps_batch_v2.yaml
+#
+# This package is independent of the existing v1 CSV logger.  LDS is the system
+# of record. No script here writes a record on scan alone: scan -> resolve ->
+# visible confirmation -> commit. Configure only lds_base_url and lds_token in
+# secrets.yaml; physical chamber entities are only in cm2_sensor_map.yaml.
+# =============================================================================
+
+# The REST integration needs a templatable base URL and bearer header. These
+# attributes are internal transport configuration; do not add this entity to a
+# dashboard. All REST commands below receive the same two secrets directly.
+template:
+  - sensor:
+      - name: "CM2 LDS connection"
+        unique_id: cm2_lds_connection
+        icon: mdi:server-network
+        state: "configured"
+        attributes:
+          base_url: !secret lds_base_url
+          bearer_token: !secret lds_token
+
+      - name: "CM2 selected batch stage"
+        unique_id: cm2_selected_batch_stage
+        icon: mdi:transit-connection-variant
+        state: >-
+          {{ state_attr('sensor.cm2_selected_timeline', 'current_stage')
+             | default('unknown', true) }}
+
+      - name: "CM2 transfer queue count"
+        unique_id: cm2_transfer_queue_count
+        icon: mdi:swap-horizontal-bold
+        state: >-
+          {% set rows = state_attr('sensor.cm2_dark_transfer_queue_data', 'batches')
+             | default(state_attr('sensor.cm2_dark_transfer_queue_data', 'items'), true)
+             | default([], true) %}
+          {{ rows | count }}
+        attributes:
+          batches: >-
+            {{ state_attr('sensor.cm2_dark_transfer_queue_data', 'batches')
+               | default(state_attr('sensor.cm2_dark_transfer_queue_data', 'items'), true)
+               | default([], true) }}
+
+      - name: "CM2 data completeness"
+        unique_id: cm2_data_completeness
+        icon: mdi:database-check-outline
+        unit_of_measurement: "%"
+        state: >-
+          {% set c = state_attr('sensor.cm2_selected_timeline', 'completeness') %}
+          {% if c is number %}{{ c }}
+          {% elif c is mapping %}{{ c.get('overall', c.get('score', 'unknown')) }}
+          {% else %}unknown{% endif %}
+        attributes:
+          source_batch_id: "{{ state_attr('sensor.cm2_selected_timeline', 'batch_id') | default(none, true) }}"
+          completeness_detail: "{{ state_attr('sensor.cm2_selected_timeline', 'completeness') | default(none, true) }}"
+
+      - name: "CM2 duration autoclave to inoculation"
+        unique_id: cm2_duration_autoclave_to_inoculation
+        icon: mdi:timer-outline
+        unit_of_measurement: "h"
+        state: >-
+          {% set d = state_attr('sensor.cm2_selected_timeline', 'durations')
+             | default(state_attr('sensor.cm2_selected_timeline', 'stage_durations'), true)
+             | default({}, true) %}
+          {{ d.get('h_autoclave_to_inoculation', 'unknown') if d is mapping else 'unknown' }}
+
+      - name: "CM2 duration inoculation to transfer"
+        unique_id: cm2_duration_inoculation_to_transfer
+        icon: mdi:timer-outline
+        unit_of_measurement: "h"
+        state: >-
+          {% set d = state_attr('sensor.cm2_selected_timeline', 'durations')
+             | default(state_attr('sensor.cm2_selected_timeline', 'stage_durations'), true)
+             | default({}, true) %}
+          {{ d.get('h_inoculation_to_transfer', 'unknown') if d is mapping else 'unknown' }}
+
+      - name: "CM2 duration transfer to primordia"
+        unique_id: cm2_duration_transfer_to_primordia
+        icon: mdi:timer-outline
+        unit_of_measurement: "h"
+        state: >-
+          {% set d = state_attr('sensor.cm2_selected_timeline', 'durations')
+             | default(state_attr('sensor.cm2_selected_timeline', 'stage_durations'), true)
+             | default({}, true) %}
+          {{ d.get('h_transfer_to_primordia', 'unknown') if d is mapping else 'unknown' }}
+
+      - name: "CM2 duration primordia to harvest"
+        unique_id: cm2_duration_primordia_to_harvest
+        icon: mdi:timer-outline
+        unit_of_measurement: "h"
+        state: >-
+          {% set d = state_attr('sensor.cm2_selected_timeline', 'durations')
+             | default(state_attr('sensor.cm2_selected_timeline', 'stage_durations'), true)
+             | default({}, true) %}
+          {{ d.get('h_primordia_to_harvest', 'unknown') if d is mapping else 'unknown' }}
+
+      - name: "CM2 total cycle duration"
+        unique_id: cm2_duration_total_cycle
+        icon: mdi:timer-check-outline
+        unit_of_measurement: "h"
+        state: >-
+          {% set d = state_attr('sensor.cm2_selected_timeline', 'durations')
+             | default(state_attr('sensor.cm2_selected_timeline', 'stage_durations'), true)
+             | default({}, true) %}
+          {{ d.get('h_total_cycle', 'unknown') if d is mapping else 'unknown' }}
+
+input_text:
+  cm2_scan_payload:
+    name: "CM2 scan payload"
+    max: 255
+    icon: mdi:qrcode-scan
+  cm2_selected_id:
+    name: "CM2 selected Batch / Jar ID"
+    max: 64
+    icon: mdi:barcode-scan
+  cm2_selected_name:
+    name: "CM2 scan confirmation record"
+    max: 255
+    icon: mdi:format-list-bulleted
+  cm2_rack_shelf:
+    name: "CM2 rack / shelf"
+    max: 64
+    icon: mdi:view-grid-outline
+  cm2_notes:
+    name: "CM2 notes"
+    max: 500
+    icon: mdi:note-text-outline
+  cm2_reason:
+    name: "CM2 reason"
+    max: 255
+    icon: mdi:comment-question-outline
+  cm2_intervention_detail:
+    name: "CM2 intervention detail"
+    max: 500
+    icon: mdi:text-box-edit-outline
+  cm2_cost_item:
+    name: "CM2 cost item"
+    max: 120
+    icon: mdi:receipt-text-outline
+  cm2_cost_unit:
+    name: "CM2 cost unit"
+    max: 32
+    icon: mdi:ruler
+
+input_select:
+  cm2_pending_action:
+    name: "CM2 pending scan action"
+    icon: mdi:clipboard-check-outline
+    options:
+      - none
+      - inoculation
+      - transfer_dark_to_light
+      - visual_inspection
+      - contamination
+      - harvest
+      - cleaning
+      - discard
+      - final_yield
+    initial: none
+  cm2_operator:
+    name: "CM2 operator"
+    icon: mdi:account-hard-hat
+    options:
+      - "-- select operator --"
+      - Aman
+      - Staff-1
+      - Staff-2
+    initial: "-- select operator --"
+  cm2_dest_chamber:
+    name: "CM2 destination chamber"
+    icon: mdi:location-enter
+    options:
+      - "-- select chamber --"
+      - dark_room
+      - light_room
+      - fruit_1
+      - fruit_2
+      - drying
+      - lab
+    initial: "-- select chamber --"
+  cm2_source_location:
+    name: "CM2 source location"
+    icon: mdi:location-exit
+    options:
+      - "-- select chamber --"
+      - dark_room
+      - light_room
+      - fruit_1
+      - fruit_2
+      - drying
+      - lab
+    initial: "-- select chamber --"
+  cm2_moisture_level:
+    name: "CM2 moisture level"
+    icon: mdi:water-percent
+    options:
+      - "-- select moisture --"
+      - wet
+      - moist
+      - ideal
+      - dry
+      - cracked
+    initial: "-- select moisture --"
+  cm2_strain:
+    name: "CM2 strain"
+    icon: mdi:dna
+    options:
+      - CM-Wild-1
+      - CM-Comm-A
+      - CM-Comm-B
+      - CM-Isolate-Agar
+    initial: CM-Comm-A
+  cm2_recipe_version:
+    name: "CM2 recipe version"
+    icon: mdi:book-cog-outline
+    options:
+      - R-2026.1
+      - R-2026.2
+      - R-2026.3
+    initial: R-2026.3
+  cm2_culture_generation:
+    name: "CM2 culture generation"
+    icon: mdi:source-branch
+    options: [G0, G1, G2, G3, G4, G5, G6]
+    initial: G1
+  cm2_culture_source:
+    name: "CM2 culture source"
+    icon: mdi:flask-outline
+    options: [agar_slant, LC_master, LC_working, G2G, spore_syringe, purchased]
+    initial: LC_working
+  cm2_inoculation_method:
+    name: "CM2 inoculation method"
+    icon: mdi:needle
+    options: [LC_syringe, agar_wedge, grain_to_grain, spore_syringe]
+    initial: LC_syringe
+  cm2_jar_type:
+    name: "CM2 jar type"
+    icon: mdi:cup-outline
+    options: [PP400, glass_500, glass_1000, bag_filter]
+    initial: PP400
+  cm2_lid_filter_type:
+    name: "CM2 lid / filter type"
+    icon: mdi:filter-outline
+    options: [synthetic_filter_disc, micropore_tape, tyvek, breather_lid]
+    initial: synthetic_filter_disc
+  cm2_water_source:
+    name: "CM2 water source"
+    icon: mdi:water-outline
+    options: [RO, distilled, municipal_boiled, municipal]
+    initial: RO
+  cm2_sterilization_profile:
+    name: "CM2 sterilization profile"
+    icon: mdi:autoclave
+    options: [121C_15psi_90min, 121C_15psi_120min, 121C_15psi_150min]
+    initial: 121C_15psi_120min
+  cm2_contamination_type:
+    name: "CM2 contamination type"
+    icon: mdi:bacteria
+    options: [none, trichoderma, bacterial_wetspot, aspergillus, penicillium, mucor_cobweb, yeast_sour, unknown]
+    initial: none
+  cm2_drying_method:
+    name: "CM2 drying method"
+    icon: mdi:weather-sunny
+    options: [freeze_dry, dehydrator, oven, air]
+    initial: dehydrator
+  cm2_grade:
+    name: "CM2 harvest grade"
+    icon: mdi:medal-outline
+    options: [A, B, C, reject]
+    initial: A
+  cm2_intervention_type:
+    name: "CM2 intervention type"
+    icon: mdi:tools
+    options: [misting, ventilation_adjust, lighting_change, cleaning, movement, recipe_change, equipment_fault, corrective_action, calibration, other]
+    initial: cleaning
+  cm2_mycelial_density:
+    name: "CM2 mycelial density"
+    icon: mdi:blur
+    options: [sparse, moderate, dense, very_dense]
+    initial: moderate
+  cm2_mycelial_color:
+    name: "CM2 mycelial colour"
+    icon: mdi:palette-outline
+    options: [white, cream, pale_yellow, orange, deep_orange, discolored]
+    initial: white
+  cm2_condensation_level:
+    name: "CM2 condensation"
+    icon: mdi:water-opacity
+    options: [none, light, moderate, heavy, pooling]
+    initial: none
+  cm2_substrate_dryness:
+    name: "CM2 substrate dryness"
+    icon: mdi:grass
+    options: [wet, moist, ideal, dry, cracked]
+    initial: ideal
+  cm2_contamination_status:
+    name: "CM2 contamination status"
+    icon: mdi:alert-circle-outline
+    options: [none, suspected, confirmed]
+    initial: none
+  cm2_cost_category:
+    name: "CM2 cost category"
+    icon: mdi:currency-inr
+    options: [ingredient, consumable, electricity, labor, waste, sale]
+    initial: ingredient
+
+input_number:
+  cm2_colonization_pct:
+    name: "CM2 colonization"
+    min: 0
+    max: 100
+    step: 5
+    mode: box
+    unit_of_measurement: "%"
+    icon: mdi:percent
+  cm2_primordia_count:
+    name: "CM2 primordia count"
+    min: 0
+    max: 10000
+    step: 1
+    mode: box
+    icon: mdi:counter
+  cm2_fruiting_body_count:
+    name: "CM2 fruiting body count"
+    min: 0
+    max: 10000
+    step: 1
+    mode: box
+    icon: mdi:counter
+  cm2_avg_height_mm:
+    name: "CM2 average height"
+    min: 0
+    max: 1000
+    step: 0.5
+    mode: box
+    unit_of_measurement: "mm"
+    icon: mdi:ruler
+  cm2_morphology_score:
+    name: "CM2 morphology score"
+    min: 1
+    max: 5
+    step: 1
+    mode: box
+    icon: mdi:star-outline
+  cm2_fresh_weight_g:
+    name: "CM2 fresh weight"
+    min: 0
+    max: 100000
+    step: 0.1
+    mode: box
+    unit_of_measurement: "g"
+    icon: mdi:scale
+  cm2_dry_weight_g:
+    name: "CM2 dry weight"
+    min: 0
+    max: 100000
+    step: 0.1
+    mode: box
+    unit_of_measurement: "g"
+    icon: mdi:weight-gram
+  cm2_substrate_dry_g:
+    name: "CM2 substrate dry weight"
+    min: 0
+    max: 100000
+    step: 0.1
+    mode: box
+    unit_of_measurement: "g"
+    icon: mdi:weight-gram
+  cm2_labor_minutes:
+    name: "CM2 labor minutes"
+    min: 0
+    max: 1440
+    step: 1
+    mode: box
+    unit_of_measurement: "min"
+    icon: mdi:timer-outline
+  cm2_kwh:
+    name: "CM2 electricity"
+    min: 0
+    max: 100000
+    step: 0.01
+    mode: box
+    unit_of_measurement: "kWh"
+    icon: mdi:lightning-bolt-outline
+  cm2_cost_quantity:
+    name: "CM2 cost quantity"
+    min: 0
+    max: 100000
+    step: 0.01
+    mode: box
+    icon: mdi:counter
+  cm2_unit_cost_inr:
+    name: "CM2 unit cost"
+    min: 0
+    max: 1000000
+    step: 0.01
+    mode: box
+    unit_of_measurement: "INR"
+    icon: mdi:currency-inr
+  cm2_total_cost_inr:
+    name: "CM2 total cost"
+    min: 0
+    max: 10000000
+    step: 0.01
+    mode: box
+    unit_of_measurement: "INR"
+    icon: mdi:currency-inr
+  cm2_review_window_days:
+    name: "CM2 dark-stage review window"
+    min: 5
+    max: 40
+    step: 1
+    mode: box
+    unit_of_measurement: "d"
+    icon: mdi:calendar-clock
+    initial: 14
+
+input_boolean:
+  cm2_scan_confirm_armed:
+    name: "CM2 scan action armed"
+    icon: mdi:shield-check-outline
+
+input_datetime:
+  cm2_event_ts:
+    name: "CM2 event timestamp"
+    has_date: true
+    has_time: true
+    icon: mdi:calendar-clock
+
+# REST commands have templated endpoint variables. Every invocation below passes
+# lds_base_url: !secret lds_base_url and lds_token: !secret lds_token, so URL and
+# Authorization are never hard-coded in this package.
+rest_command:
+  cm2_resolve:
+    url: "{{ lds_base_url }}/resolve?t={{ token | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Accept: application/json
+    verify_ssl: false
+  cm2_post_event:
+    url: "{{ lds_base_url }}/events"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
+  cm2_post_transfer:
+    url: "{{ lds_base_url }}/events/transfer"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
+  cm2_post_observation:
+    url: "{{ lds_base_url }}/observations"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
+  cm2_post_intervention:
+    url: "{{ lds_base_url }}/interventions"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
+  cm2_post_harvest:
+    url: "{{ lds_base_url }}/harvest"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
+  cm2_post_cost:
+    url: "{{ lds_base_url }}/costs"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
+  cm2_create_batch:
+    url: "{{ lds_base_url }}/batches"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
+  cm2_summarize:
+    url: "{{ lds_base_url }}/env/summarize"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
+
+# Poll LDS rather than Home Assistant history. The data source is LDS /batches
+# and /batches/{id}/timeline, refreshed every 60 seconds for dashboard use.
+rest:
+  - resource_template: >-
+      {{ state_attr('sensor.cm2_lds_connection', 'base_url') ~ '/health' }}
+    method: GET
+    headers:
+      Authorization: >-
+        Bearer {{ state_attr('sensor.cm2_lds_connection', 'bearer_token') }}
+      Accept: application/json
+    verify_ssl: false
+    scan_interval: 60
+    sensor:
+      - name: "CM2 LDS status"
+        unique_id: cm2_lds_status
+        value_template: >-
+          {{ value_json.get('status', 'online') if value_json is mapping else 'online' }}
+
+  - resource_template: >-
+      {{ state_attr('sensor.cm2_lds_connection', 'base_url') ~ '/batches?stage=dark_incubation&limit=200' }}
+    method: GET
+    headers:
+      Authorization: >-
+        Bearer {{ state_attr('sensor.cm2_lds_connection', 'bearer_token') }}
+      Accept: application/json
+    verify_ssl: false
+    scan_interval: 60
+    sensor:
+      - name: "CM2 dark transfer queue data"
+        unique_id: cm2_dark_transfer_queue_data
+        value_template: >-
+          {% if value_json is mapping %}
+            {{ value_json.get('batches', value_json.get('items', [])) | count }}
+          {% else %}{{ value_json | count }}{% endif %}
+        json_attributes:
+          - batches
+          - items
+
+  - resource_template: >-
+      {% set selected = states('input_text.cm2_selected_id') | trim %}
+      {% set batch = selected.split('-J')[0] if '-J' in selected else selected %}
+      {{ state_attr('sensor.cm2_lds_connection', 'base_url') ~ '/batches/' ~ batch ~ '/timeline' }}
+    method: GET
+    headers:
+      Authorization: >-
+        Bearer {{ state_attr('sensor.cm2_lds_connection', 'bearer_token') }}
+      Accept: application/json
+    verify_ssl: false
+    scan_interval: 60
+    sensor:
+      - name: "CM2 selected timeline"
+        unique_id: cm2_selected_timeline
+        value_template: >-
+          {% if value_json is mapping %}
+            {{ value_json.get('current_stage', value_json.get('batch', {}).get('current_stage', 'unknown')) }}
+          {% else %}unknown{% endif %}
+        json_attributes:
+          - batch_id
+          - current_stage
+          - durations
+          - stage_durations
+          - completeness
+          - batch
+
+script:
+  cm2_reset_form:
+    alias: "CM2 · Clear scan action form"
+    icon: mdi:eraser
+    mode: single
+    sequence:
+      - action: input_text.set_value
+        target:
+          entity_id:
+            - input_text.cm2_scan_payload
+            - input_text.cm2_selected_id
+            - input_text.cm2_selected_name
+            - input_text.cm2_rack_shelf
+            - input_text.cm2_notes
+            - input_text.cm2_reason
+            - input_text.cm2_intervention_detail
+            - input_text.cm2_cost_item
+            - input_text.cm2_cost_unit
+        data:
+          value: ""
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.cm2_pending_action
+        data:
+          option: none
+      - action: input_select.select_option
+        target:
+          entity_id:
+            - input_select.cm2_dest_chamber
+            - input_select.cm2_source_location
+        data:
+          option: "-- select chamber --"
+      - action: input_select.select_option
+        target:
+          entity_id: input_select.cm2_moisture_level
+        data:
+          option: "-- select moisture --"
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.cm2_colonization_pct
+        data:
+          value: 0
+
+  cm2_resolve_scan:
+    alias: "CM2 · Resolve scan and arm confirmation"
+    icon: mdi:qrcode-scan
+    mode: restart
+    sequence:
+      - variables:
+          raw_payload: "{{ states('input_text.cm2_scan_payload') | trim }}"
+          token: >-
+            {% set found = raw_payload | regex_findall('(?:[?&]t=)([^&#]+)') %}
+            {{ found[0] if found | count > 0 else raw_payload }}
+      - choose:
+          - conditions: "{{ token | trim == '' }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "CM2 scan not resolved"
+                  message: "No token or /lab-scan?t= URL was supplied. No LDS record was changed."
+                  notification_id: cm2_scan_resolve_error
+              - stop: "Blank scan payload; confirmation remains disarmed." 
+      - action: rest_command.cm2_resolve
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          token: "{{ token | trim }}"
+        response_variable: resolve_response
+      - variables:
+          resolve_body: >-
+            {% set content = resolve_response.content | default('{}', true) %}
+            {{ content if content is mapping else content | from_json({}) }}
+      - choose:
+          - conditions: >-
+              {{ resolve_response.status | default(0) | int in [200, 201]
+                 and resolve_body is mapping
+                 and (resolve_body.get('jar_id') or resolve_body.get('batch_id')) }}
+            sequence:
+              - variables:
+                  resolved_id: "{{ resolve_body.get('jar_id') or resolve_body.get('batch_id') }}"
+                  resolved_name: >-
+                    {{ (resolve_body.get('jar_id') or resolve_body.get('batch_id')) ~ ' · ' ~
+                       resolve_body.get('strain', 'unknown strain') ~ ' · ' ~
+                       resolve_body.get('current_stage', 'unknown stage') ~ ' · ' ~
+                       resolve_body.get('current_location', 'unknown location') }}
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.cm2_selected_id
+                data:
+                  value: "{{ resolved_id }}"
+              - action: input_text.set_value
+                target:
+                  entity_id: input_text.cm2_selected_name
+                data:
+                  value: "{{ resolved_name }}"
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: input_boolean.cm2_scan_confirm_armed
+          - conditions: []
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.cm2_scan_confirm_armed
+              - action: persistent_notification.create
+                data:
+                  title: "CM2 scan not resolved"
+                  message: >-
+                    LDS could not resolve this token (HTTP {{ resolve_response.status | default('no response', true) }}).
+                    Confirmation was not armed and no record was changed.
+                  notification_id: cm2_scan_resolve_error
+
+  cm2_confirm_and_commit:
+    alias: "CM2 · Confirm and commit armed scan action"
+    icon: mdi:check-decagram-outline
+    mode: single
+    sequence:
+      - variables:
+          armed: "{{ is_state('input_boolean.cm2_scan_confirm_armed', 'on') }}"
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+      - choose:
+          - conditions: "{{ not armed or selected_id == '' }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "CM2 commit refused"
+                  message: "Resolve a scan and confirm within the 120-second window before committing. No LDS record was changed."
+                  notification_id: cm2_commit_refused
+              - stop: "Scan confirmation is not armed or no Batch/Jar is selected." 
+      - variables:
+          pending_action: "{{ states('input_select.cm2_pending_action') }}"
+          client_event_id: "{{ now().timestamp() }}-{{ range(100000,999999) | random }}"
+      - choose:
+          - conditions: "{{ pending_action == 'none' }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "CM2 commit refused"
+                  message: "Select a pending action before confirming. No LDS record was changed."
+                  notification_id: cm2_commit_refused
+              - stop: "No pending action selected."
+          - conditions: "{{ pending_action == 'transfer_dark_to_light' }}"
+            sequence:
+              - action: script.cm2_transfer_dark_to_light
+                data:
+                  client_event_id: "{{ client_event_id }}"
+          - conditions: "{{ pending_action == 'visual_inspection' }}"
+            sequence:
+              - action: script.cm2_log_observation
+                data:
+                  client_event_id: "{{ client_event_id }}"
+          - conditions: "{{ pending_action == 'contamination' }}"
+            sequence:
+              - action: script.cm2_log_contamination
+                data:
+                  client_event_id: "{{ client_event_id }}"
+          - conditions: "{{ pending_action == 'harvest' }}"
+            sequence:
+              - action: script.cm2_log_harvest
+                data:
+                  client_event_id: "{{ client_event_id }}"
+          - conditions: "{{ pending_action == 'cleaning' }}"
+            sequence:
+              - action: script.cm2_log_cleaning
+                data:
+                  client_event_id: "{{ client_event_id }}"
+          - conditions: "{{ pending_action == 'discard' }}"
+            sequence:
+              - action: script.cm2_log_discard
+                data:
+                  client_event_id: "{{ client_event_id }}"
+          - conditions: "{{ pending_action == 'final_yield' }}"
+            sequence:
+              - action: script.cm2_log_final_yield
+                data:
+                  client_event_id: "{{ client_event_id }}"
+          - conditions: "{{ pending_action == 'inoculation' }}"
+            sequence:
+              - action: rest_command.cm2_post_event
+                data:
+                  lds_base_url: !secret lds_base_url
+                  lds_token: !secret lds_token
+                  payload: >-
+                    {% set is_jar = '-J' in selected_id %}
+                    {{ {
+                      'ts': now().isoformat(), 'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+                      'jar_id': selected_id if is_jar else none, 'action': 'inoculation', 'to_stage': 'inoculated',
+                      'operator': states('input_select.cm2_operator'), 'notes': states('input_text.cm2_notes'),
+                      'data_source': 'qr_scan', 'client_event_id': client_event_id
+                    } | tojson }}
+                response_variable: inoculation_response
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.cm2_scan_confirm_armed
+      - action: script.cm2_reset_form
+
+  cm2_transfer_dark_to_light:
+    alias: "CM2 · Transfer dark incubation to light"
+    icon: mdi:swap-horizontal-bold
+    mode: single
+    fields:
+      client_event_id:
+        description: "Optional caller-provided idempotency ID; generated when run directly."
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          operator: "{{ states('input_select.cm2_operator') }}"
+          source_location: "{{ states('input_select.cm2_source_location') }}"
+          dest_chamber: "{{ states('input_select.cm2_dest_chamber') }}"
+          rack_shelf: "{{ states('input_text.cm2_rack_shelf') | trim }}"
+          reason: "{{ states('input_text.cm2_reason') | trim }}"
+          colonization_state: "{{ states('input_number.cm2_colonization_pct') }}"
+          moisture_level: "{{ states('input_select.cm2_moisture_level') }}"
+          missing_fields: >-
+            {% set ns = namespace(fields=[]) %}
+            {% if operator in ['', 'unknown', 'unavailable', 'none', '-- select operator --'] %}{% set ns.fields = ns.fields + ['operator'] %}{% endif %}
+            {% if source_location in ['', 'unknown', 'unavailable', 'none', '-- select chamber --'] %}{% set ns.fields = ns.fields + ['source_location'] %}{% endif %}
+            {% if dest_chamber in ['', 'unknown', 'unavailable', 'none', '-- select chamber --'] %}{% set ns.fields = ns.fields + ['dest_chamber'] %}{% endif %}
+            {% if rack_shelf in ['', 'unknown', 'unavailable', 'none'] %}{% set ns.fields = ns.fields + ['rack_shelf'] %}{% endif %}
+            {% if reason in ['', 'unknown', 'unavailable', 'none'] %}{% set ns.fields = ns.fields + ['reason'] %}{% endif %}
+            {% if colonization_state in ['', 'unknown', 'unavailable', 'none'] %}{% set ns.fields = ns.fields + ['colonization_pct'] %}{% endif %}
+            {% if moisture_level in ['', 'unknown', 'unavailable', 'none', '-- select moisture --'] %}{% set ns.fields = ns.fields + ['moisture_level'] %}{% endif %}
+            {{ ns.fields | join(', ') }}
+      - choose:
+          - conditions: "{{ missing_fields | trim != '' }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "CM2 transfer blocked — required fields missing"
+                  message: "Missing: {{ missing_fields }}. No LDS transfer was created."
+                  notification_id: cm2_transfer_missing_fields
+              - stop: "Transfer aborted: missing {{ missing_fields }}." 
+      - action: script.cm2_env_payload
+        data:
+          chamber: "{{ dest_chamber }}"
+        response_variable: env_response
+      - variables:
+          env_payload: "{{ env_response.env | default({}, true) }}"
+          transfer_event_id: "{{ client_event_id | default(now().timestamp() ~ '-' ~ (range(100000,999999) | random), true) }}"
+          event_ts: >-
+            {% set configured = states('input_datetime.cm2_event_ts') %}
+            {{ (configured | as_datetime | as_local).isoformat() if configured not in ['', 'unknown', 'unavailable', 'none'] else now().isoformat() }}
+      - action: rest_command.cm2_post_transfer
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {% set is_jar = '-J' in selected_id %}
+            {{ {
+              'ts': event_ts,
+              'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+              'jar_ids': [selected_id] if is_jar else none,
+              'operator': operator,
+              'source_location': source_location,
+              'dest_chamber': dest_chamber,
+              'rack_shelf': rack_shelf,
+              'reason': reason,
+              'colonization_pct': colonization_state | float,
+              'moisture_level': moisture_level,
+              'env': env_payload,
+              'notes': states('input_text.cm2_notes'),
+              'client_event_id': transfer_event_id,
+              'data_source': 'qr_scan'
+            } | tojson }}
+        response_variable: transfer_response
+      - choose:
+          - conditions: "{{ transfer_response.status | default(0) | int in [200, 201, 202] }}"
+            sequence:
+              - action: logbook.log
+                data:
+                  name: "Cordyceps Lab v2"
+                  message: >-
+                    Dark→light transfer committed for {{ selected_id }} from {{ source_location }} to {{ dest_chamber }} / {{ rack_shelf }}.
+                  entity_id: input_text.cm2_selected_id
+          - conditions: []
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "CM2 transfer not committed"
+                  message: "LDS returned HTTP {{ transfer_response.status | default('no response', true) }}. Form retained; no local success was recorded."
+                  notification_id: cm2_transfer_error
+              - stop: "LDS rejected or did not confirm the transfer." 
+
+  cm2_log_observation:
+    alias: "CM2 · Log visual observation"
+    icon: mdi:eye-outline
+    mode: single
+    fields:
+      client_event_id: {description: "Optional idempotency ID"}
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          event_id: "{{ client_event_id | default(now().timestamp() ~ '-' ~ (range(100000,999999) | random), true) }}"
+      - action: rest_command.cm2_post_observation
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {% set is_jar = '-J' in selected_id %}
+            {{ {
+              'ts': now().isoformat(), 'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+              'jar_id': selected_id if is_jar else none, 'stage': states('sensor.cm2_selected_batch_stage'),
+              'colonization_pct': states('input_number.cm2_colonization_pct') | float,
+              'mycelial_density': states('input_select.cm2_mycelial_density'),
+              'mycelial_color': states('input_select.cm2_mycelial_color'),
+              'condensation_level': states('input_select.cm2_condensation_level'),
+              'substrate_dryness': states('input_select.cm2_substrate_dryness'),
+              'contamination_status': states('input_select.cm2_contamination_status'),
+              'contamination_type': states('input_select.cm2_contamination_type'),
+              'primordia_count': states('input_number.cm2_primordia_count') | int,
+              'fruiting_body_count': states('input_number.cm2_fruiting_body_count') | int,
+              'avg_height_mm': states('input_number.cm2_avg_height_mm') | float,
+              'morphology_score': states('input_number.cm2_morphology_score') | int,
+              'notes': states('input_text.cm2_notes'), 'operator': states('input_select.cm2_operator'),
+              'data_source': 'qr_scan', 'client_event_id': event_id
+            } | tojson }}
+        response_variable: observation_response
+
+  cm2_log_intervention:
+    alias: "CM2 · Log intervention"
+    icon: mdi:tools
+    mode: single
+    fields:
+      client_event_id: {description: "Optional idempotency ID"}
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          event_id: "{{ client_event_id | default(now().timestamp() ~ '-' ~ (range(100000,999999) | random), true) }}"
+      - action: rest_command.cm2_post_intervention
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {% set is_jar = '-J' in selected_id %}
+            {{ {
+              'ts': now().isoformat(), 'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+              'jar_id': selected_id if is_jar else none, 'intervention_type': states('input_select.cm2_intervention_type'),
+              'detail': states('input_text.cm2_intervention_detail'), 'duration_min': states('input_number.cm2_labor_minutes') | float,
+              'notes': states('input_text.cm2_notes'), 'operator': states('input_select.cm2_operator'),
+              'data_source': 'qr_scan', 'client_event_id': event_id
+            } | tojson }}
+        response_variable: intervention_response
+
+  cm2_log_harvest:
+    alias: "CM2 · Log harvest"
+    icon: mdi:basket-check-outline
+    mode: single
+    fields:
+      client_event_id: {description: "Optional idempotency ID"}
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          event_id: "{{ client_event_id | default(now().timestamp() ~ '-' ~ (range(100000,999999) | random), true) }}"
+      - action: rest_command.cm2_post_harvest
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {% set is_jar = '-J' in selected_id %}
+            {% set fresh = states('input_number.cm2_fresh_weight_g') | float %}
+            {% set dry = states('input_number.cm2_dry_weight_g') | float %}
+            {% set substrate = states('input_number.cm2_substrate_dry_g') | float %}
+            {{ {
+              'ts': now().isoformat(), 'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+              'jar_id': selected_id if is_jar else none, 'fresh_weight_g': fresh, 'dry_weight_g': dry,
+              'substrate_dry_g': substrate, 'biological_efficiency_pct': (100 * dry / substrate) if substrate > 0 else none,
+              'grade': states('input_select.cm2_grade'), 'drying_method': states('input_select.cm2_drying_method'),
+              'notes': states('input_text.cm2_notes'), 'operator': states('input_select.cm2_operator'),
+              'data_source': 'qr_scan', 'client_event_id': event_id
+            } | tojson }}
+        response_variable: harvest_response
+
+  cm2_log_contamination:
+    alias: "CM2 · Log contamination event"
+    icon: mdi:bacteria-outline
+    mode: single
+    fields:
+      client_event_id: {description: "Optional idempotency ID"}
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          event_id: "{{ client_event_id | default(now().timestamp() ~ '-' ~ (range(100000,999999) | random), true) }}"
+      - action: rest_command.cm2_post_event
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {% set is_jar = '-J' in selected_id %}
+            {{ {
+              'ts': now().isoformat(), 'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+              'jar_id': selected_id if is_jar else none, 'from_stage': states('sensor.cm2_selected_batch_stage'),
+              'to_stage': 'contaminated', 'action': 'contamination',
+              'source_location': states('input_select.cm2_source_location'),
+              'reason': states('input_select.cm2_contamination_type'), 'notes': states('input_text.cm2_notes'),
+              'operator': states('input_select.cm2_operator'), 'data_source': 'qr_scan', 'client_event_id': event_id
+            } | tojson }}
+        response_variable: contamination_response
+
+  cm2_log_cleaning:
+    alias: "CM2 · Log cleaning"
+    icon: mdi:spray-bottle
+    mode: single
+    fields:
+      client_event_id: {description: "Optional idempotency ID"}
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          event_id: "{{ client_event_id | default(now().timestamp() ~ '-' ~ (range(100000,999999) | random), true) }}"
+      - action: rest_command.cm2_post_intervention
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {% set is_jar = '-J' in selected_id %}
+            {{ {
+              'ts': now().isoformat(), 'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+              'jar_id': selected_id if is_jar else none, 'intervention_type': 'cleaning',
+              'detail': states('input_text.cm2_intervention_detail'),
+              'notes': states('input_text.cm2_notes'), 'operator': states('input_select.cm2_operator'),
+              'data_source': 'qr_scan', 'client_event_id': event_id
+            } | tojson }}
+        response_variable: cleaning_response
+
+  cm2_log_discard:
+    alias: "CM2 · Log discard"
+    icon: mdi:delete-alert-outline
+    mode: single
+    fields:
+      client_event_id: {description: "Optional idempotency ID"}
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          event_id: "{{ client_event_id | default(now().timestamp() ~ '-' ~ (range(100000,999999) | random), true) }}"
+      - action: rest_command.cm2_post_event
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {% set is_jar = '-J' in selected_id %}
+            {{ {
+              'ts': now().isoformat(), 'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+              'jar_id': selected_id if is_jar else none, 'from_stage': states('sensor.cm2_selected_batch_stage'),
+              'to_stage': 'discarded', 'action': 'discard', 'reason': states('input_text.cm2_reason'),
+              'notes': states('input_text.cm2_notes'), 'operator': states('input_select.cm2_operator'),
+              'data_source': 'qr_scan', 'client_event_id': event_id
+            } | tojson }}
+        response_variable: discard_response
+
+  cm2_log_final_yield:
+    alias: "CM2 · Log final yield"
+    icon: mdi:weight-gram
+    mode: single
+    fields:
+      client_event_id: {description: "Optional idempotency ID"}
+    sequence:
+      - action: script.cm2_log_harvest
+        data:
+          client_event_id: "{{ client_event_id | default(now().timestamp() ~ '-' ~ (range(100000,999999) | random), true) }}"
+
+  cm2_log_cost:
+    alias: "CM2 · Log cost"
+    icon: mdi:currency-inr
+    mode: single
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          event_id: "{{ now().timestamp() }}-{{ range(100000,999999) | random }}"
+      - action: rest_command.cm2_post_cost
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {% set is_jar = '-J' in selected_id %}
+            {{ {
+              'ts': now().isoformat(), 'batch_id': selected_id.split('-J')[0] if is_jar else selected_id,
+              'category': states('input_select.cm2_cost_category'), 'item': states('input_text.cm2_cost_item'),
+              'quantity': states('input_number.cm2_cost_quantity') | float, 'unit': states('input_text.cm2_cost_unit'),
+              'unit_cost_inr': states('input_number.cm2_unit_cost_inr') | float,
+              'total_inr': states('input_number.cm2_total_cost_inr') | float,
+              'labor_minutes': states('input_number.cm2_labor_minutes') | float,
+              'kwh': states('input_number.cm2_kwh') | float, 'notes': states('input_text.cm2_notes'),
+              'operator': states('input_select.cm2_operator'), 'data_source': 'manual', 'client_event_id': event_id
+            } | tojson }}
+        response_variable: cost_response
+
+  cm2_create_batch:
+    alias: "CM2 · Create autoclaved batch"
+    icon: mdi:package-variant-plus
+    mode: single
+    sequence:
+      - variables:
+          event_id: "{{ now().timestamp() }}-{{ range(100000,999999) | random }}"
+      - action: rest_command.cm2_create_batch
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {{ {
+              'created_ts': now().isoformat(), 'strain': states('input_select.cm2_strain'),
+              'culture_generation': states('input_select.cm2_culture_generation'),
+              'culture_source': states('input_select.cm2_culture_source'),
+              'inoculation_method': states('input_select.cm2_inoculation_method'),
+              'recipe_version': states('input_select.cm2_recipe_version'), 'water_source': states('input_select.cm2_water_source'),
+              'jar_type': states('input_select.cm2_jar_type'), 'lid_filter_type': states('input_select.cm2_lid_filter_type'),
+              'sterilization_profile': states('input_select.cm2_sterilization_profile'), 'current_stage': 'autoclaved',
+              'notes': states('input_text.cm2_notes'), 'operator': states('input_select.cm2_operator'),
+              'data_source': 'manual', 'client_event_id': event_id
+            } | tojson }}
+        response_variable: create_batch_response
+
+  cm2_summarize_selected_environment:
+    alias: "CM2 · Summarize selected environment"
+    icon: mdi:chart-bell-curve-cumulative
+    mode: single
+    sequence:
+      - variables:
+          selected_id: "{{ states('input_text.cm2_selected_id') | trim }}"
+          batch_id: "{{ selected_id.split('-J')[0] if '-J' in selected_id else selected_id }}"
+          event_id: "{{ now().timestamp() }}-{{ range(100000,999999) | random }}"
+      - action: rest_command.cm2_summarize
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {{ {'batch_id': batch_id, 'stage': states('sensor.cm2_selected_batch_stage'), 'client_event_id': event_id} | tojson }}
+        response_variable: summarize_response
+
+automation:
+  - id: cm2_scan_confirm_auto_disarm
+    alias: "CM2 · Auto-disarm scan confirmation after 120 seconds"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.cm2_scan_confirm_armed
+        to: "on"
+    actions:
+      - delay: "00:02:00"
+      - condition: state
+        entity_id: input_boolean.cm2_scan_confirm_armed
+        state: "on"
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.cm2_scan_confirm_armed
+      - action: persistent_notification.create
+        data:
+          title: "CM2 scan confirmation expired"
+          message: "The 120-second confirmation window expired. Resolve the QR token again before committing."
+          notification_id: cm2_scan_expired
+
+  - id: cm2_transfer_review_window_reached
+    alias: "CM2 · Transfer review window reached"
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        hours: "/6"
+      - trigger: state
+        entity_id: sensor.cm2_dark_transfer_queue_data
+    actions:
+      - variables:
+          review_days: "{{ states('input_number.cm2_review_window_days') | float(14) }}"
+          queue_rows: >-
+            {{ state_attr('sensor.cm2_dark_transfer_queue_data', 'batches')
+               | default(state_attr('sensor.cm2_dark_transfer_queue_data', 'items'), true)
+               | default([], true) }}
+      - repeat:
+          for_each: "{{ queue_rows }}"
+          sequence:
+            - variables:
+                row: "{{ repeat.item }}"
+                age_days: >-
+                  {% if row.incubation_age_days is defined %}{{ row.incubation_age_days }}
+                  {% elif row.dark_incubation_age_days is defined %}{{ row.dark_incubation_age_days }}
+                  {% elif row.incubation_age_h is defined %}{{ row.incubation_age_h | float / 24 }}
+                  {% elif row.age_h is defined %}{{ row.age_h | float / 24 }}
+                  {% else %}{{ none }}{% endif %}
+            - choose:
+                - conditions: >-
+                    {{ row.current_stage | default('') == 'dark_incubation'
+                       and age_days not in [none, 'unknown', 'unavailable', '']
+                       and age_days | float > review_days | float }}
+                  sequence:
+                    - action: persistent_notification.create
+                      data:
+                        title: "Transfer review window reached"
+                        message: >-
+                          {{ row.batch_id | default(row.jar_id, true) }} is in dark_incubation for
+                          {{ age_days | float | round(1) }} days (review window {{ review_days }} days).
+                          Review it; this notification never transfers anything automatically.
+                        notification_id: "cm2_transfer_review_{{ row.batch_id | default(row.jar_id, true) }}"
