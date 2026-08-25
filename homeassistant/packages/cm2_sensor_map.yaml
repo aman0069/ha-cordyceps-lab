@@ -2,9 +2,10 @@
 # CORDYCEPS LAB v2 — CHAMBER SENSOR MAP
 # File: /config/packages/cm2_sensor_map.yaml
 #
-# This is the ONLY file in v2 where physical HA entity IDs are edited.
-# Replace every value marked EDIT_ME with the real entity_id for that chamber.
-# Set a field to the unquoted scalar none when no sensor or device exists.
+# This package is initialized from the add-on Configuration tab at startup.
+# The values below are safe defaults for first install; do not edit entity IDs
+# here after the package has been copied into /config/packages/.
+# Leave an add-on field empty when no sensor or device exists.
 # The payload script deliberately sends null + "missing" for none, unknown,
 # unavailable, or empty readings. It never falls back to zero or stale data.
 # =============================================================================

@@ -14,6 +14,18 @@ Verified against HA Core 2026.8.3 / Supervisor 2026.07.5 / HAOS 18.2.
 | `timezone` | yes | Lab local time. `Asia/Kolkata`. All timestamps are stored with this offset. |
 | `ha_base_url` | yes | Where a scanned QR label sends the tablet. **Change it here, never on the labels.** |
 
+The add-on Configuration tab also contains one field for every chamber entity:
+temperature, humidity, CO2, lux, light, door, fan, humidifier, exhaust, and
+airflow for `dark_room`, `light_room`, `fruit_1`, `fruit_2`, `drying`, and
+`lab`. Enter the Home Assistant `entity_id` (for example,
+`sensor.dark_room_temperature`) in the matching field. Leave unavailable or
+unused devices empty; they are written as `none` and remain explicit missing
+data.
+
+Copy `homeassistant/packages/cm2_sensor_map.yaml` into `/config/packages/` once.
+The add-on updates its entity values from the Configuration tab whenever it
+starts, so the YAML package does not need manual entity edits.
+
 Example:
 ```yaml
 token: "a-long-random-string-you-generate"

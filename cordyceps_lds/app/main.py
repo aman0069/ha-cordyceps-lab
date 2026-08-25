@@ -30,7 +30,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Cordyceps Lab Data Service", version="2.2.0", lifespan=lifespan)
+app = FastAPI(title="Cordyceps Lab Data Service", version="2.3.0", lifespan=lifespan)
 security = HTTPBearer(auto_error=False)
 SOURCE_VALUES = {"manual", "qr_scan", "sensor", "import", "system"}
 EXPORT_TABLES = {

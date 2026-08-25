@@ -18,6 +18,30 @@ export TZ="${TZ:-$(opt timezone 'Asia/Kolkata')}"
 export HA_BASE_URL="${HA_BASE_URL:-$(opt ha_base_url 'http://homeassistant.local:8123')}"
 export LDS_DATA_DIR="${LDS_DATA_DIR:-/data}"
 
+# Apply entity IDs entered in the add-on Configuration tab to the HA package
+# copied into /config. Empty values intentionally become `none`.
+python3 - <<'PY'
+import json
+import re
+from pathlib import Path
+
+options_path = Path('/data/options.json')
+package_path = Path('/config/packages/cm2_sensor_map.yaml')
+if options_path.exists() and package_path.exists():
+  options = json.loads(options_path.read_text())
+  text = package_path.read_text()
+  for key, raw_value in options.items():
+    if not key.endswith('_entity'):
+      continue
+    value = str(raw_value or 'none').strip()
+    if value != 'none' and not re.fullmatch(r'[a-z_]+\.[a-z0-9_]+', value):
+      raise SystemExit(f'Invalid entity ID for {key}: {value}')
+    pattern = rf'^(\s+{re.escape(key)}:\s+&\S+\s+)(\S+)(\s+# EDIT_ME\s*)$'
+    text, count = re.subn(pattern, rf'\g<1>{value}\g<3>', text, count=1, flags=re.MULTILINE)
+    if count != 1:
+      print(f'WARNING: {key} is not present in {package_path}', flush=True)
+  package_path.write_text(text)
+
 if [[ -z "${LDS_TOKEN}" ]]; then
   echo "FATAL: no API token set. Set 'token' in the app configuration (or LDS_TOKEN)." >&2
   echo "Refusing to start an unauthenticated lab data service." >&2

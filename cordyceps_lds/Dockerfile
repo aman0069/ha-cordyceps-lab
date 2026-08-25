@@ -19,7 +19,7 @@ FROM ghcr.io/home-assistant/base:3.24-2026.08.0
 
 # BUILD_ARCH / BUILD_VERSION are the only args Supervisor still provides.
 ARG BUILD_ARCH="amd64"
-ARG BUILD_VERSION="2.2.0"
+ARG BUILD_VERSION="2.3.0"
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

@@ -32,13 +32,21 @@ else. Do not add another file named `config.yaml` anywhere in this repo.
    https://github.com/aman0069/ha-cordyceps-lab
    ```
 2. **Cordyceps Lab Data Service** appears in the store. Install it.
-3. In **Configuration** set:
+3. In **Configuration** set the token, timezone, redirect URL, and the chamber
+  entity IDs. Every physical sensor, switch, fan, door, humidifier, exhaust,
+  and airflow entity is configured here. Leave an unused field empty; it is
+  stored as `none` and reported as missing rather than guessed.
+4. Copy `homeassistant/packages/cm2_sensor_map.yaml` into `/config/packages/`
+  once. On every add-on start, the values from the add-on Configuration tab
+  update this package automatically. Do not edit entity IDs in the YAML file.
+
+  The first three settings are:
    ```yaml
    token: "a-long-random-string-you-generate"
    timezone: Asia/Kolkata
    ha_base_url: "http://homeassistant.local:8123"
    ```
-4. Start it. Enable **Start on boot** and **Watchdog**.
+5. Start it. Enable **Start on boot** and **Watchdog**.
 
 ### Ports
 
@@ -99,9 +107,9 @@ lds_token: "the-same-long-random-string"
      packages: !include_dir_named packages
    ```
 2. Copy `homeassistant/packages/*.yaml` into `/config/packages/`.
-3. **Edit `cm2_sensor_map.yaml` only.** Point each `# EDIT_ME` line at your real
-   ESPHome entity. Where a sensor does not exist, set it to `none` — the payload
-   then emits `null` with `_src: missing`, never a zero or a last-known value.
+3. Entity IDs are configured in the add-on **Configuration** tab. Where a
+  sensor does not exist, leave its field empty — the payload emits `null` with
+  `_src: missing`, never a zero or a last-known value.
 4. Add the three files in `homeassistant/dashboards/` as Lovelace views.
 5. Restart. `sensor.cm2_lds_status` should read `ok`.
 6. Wire the tablet scanner per `homeassistant/lab-scan.md`.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.0
+
+### Added
+- Entity IDs for all six chambers and ten supported device types are now
+  entered in the Home Assistant add-on Configuration tab.
+- Add-on startup synchronizes those values into the copied sensor package;
+  empty fields remain `none` and produce explicit missing readings.
+
 ## 2.2.0
 
 ### Fixed

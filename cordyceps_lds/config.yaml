@@ -5,7 +5,7 @@
 # Do not add another file named config.yaml anywhere inside this folder.
 name: Cordyceps Lab Data Service
 slug: cordyceps_lds
-version: "2.2.0"
+version: "2.3.0"
 description: FastAPI and SQLite batch, jar, and stage tracking service for Cordyceps Lab v2
 url: https://github.com/aman0069/ha-cordyceps-lab
 
@@ -50,12 +50,132 @@ options:
   token: ""
   timezone: Asia/Kolkata
   ha_base_url: "http://homeassistant.local:8123"
+  dark_room_temperature_entity: ""
+  dark_room_humidity_entity: ""
+  dark_room_co2_entity: ""
+  dark_room_lux_entity: ""
+  dark_room_light_entity: ""
+  dark_room_door_entity: ""
+  dark_room_fan_entity: ""
+  dark_room_humidifier_entity: ""
+  dark_room_exhaust_entity: ""
+  dark_room_airflow_entity: ""
+  light_room_temperature_entity: ""
+  light_room_humidity_entity: ""
+  light_room_co2_entity: ""
+  light_room_lux_entity: ""
+  light_room_light_entity: ""
+  light_room_door_entity: ""
+  light_room_fan_entity: ""
+  light_room_humidifier_entity: ""
+  light_room_exhaust_entity: ""
+  light_room_airflow_entity: ""
+  fruit_1_temperature_entity: ""
+  fruit_1_humidity_entity: ""
+  fruit_1_co2_entity: ""
+  fruit_1_lux_entity: ""
+  fruit_1_light_entity: ""
+  fruit_1_door_entity: ""
+  fruit_1_fan_entity: ""
+  fruit_1_humidifier_entity: ""
+  fruit_1_exhaust_entity: ""
+  fruit_1_airflow_entity: ""
+  fruit_2_temperature_entity: ""
+  fruit_2_humidity_entity: ""
+  fruit_2_co2_entity: ""
+  fruit_2_lux_entity: ""
+  fruit_2_light_entity: ""
+  fruit_2_door_entity: ""
+  fruit_2_fan_entity: ""
+  fruit_2_humidifier_entity: ""
+  fruit_2_exhaust_entity: ""
+  fruit_2_airflow_entity: ""
+  drying_temperature_entity: ""
+  drying_humidity_entity: ""
+  drying_co2_entity: ""
+  drying_lux_entity: ""
+  drying_light_entity: ""
+  drying_door_entity: ""
+  drying_fan_entity: ""
+  drying_humidifier_entity: ""
+  drying_exhaust_entity: ""
+  drying_airflow_entity: ""
+  lab_temperature_entity: ""
+  lab_humidity_entity: ""
+  lab_co2_entity: ""
+  lab_lux_entity: ""
+  lab_light_entity: ""
+  lab_door_entity: ""
+  lab_fan_entity: ""
+  lab_humidifier_entity: ""
+  lab_exhaust_entity: ""
+  lab_airflow_entity: ""
 schema:
   token: str
   timezone: str
   # Where /s/<token> redirects the tablet. Change this here — never on the
   # printed labels — if the Home Assistant web server port ever changes.
   ha_base_url: str
+  dark_room_temperature_entity: str
+  dark_room_humidity_entity: str
+  dark_room_co2_entity: str
+  dark_room_lux_entity: str
+  dark_room_light_entity: str
+  dark_room_door_entity: str
+  dark_room_fan_entity: str
+  dark_room_humidifier_entity: str
+  dark_room_exhaust_entity: str
+  dark_room_airflow_entity: str
+  light_room_temperature_entity: str
+  light_room_humidity_entity: str
+  light_room_co2_entity: str
+  light_room_lux_entity: str
+  light_room_light_entity: str
+  light_room_door_entity: str
+  light_room_fan_entity: str
+  light_room_humidifier_entity: str
+  light_room_exhaust_entity: str
+  light_room_airflow_entity: str
+  fruit_1_temperature_entity: str
+  fruit_1_humidity_entity: str
+  fruit_1_co2_entity: str
+  fruit_1_lux_entity: str
+  fruit_1_light_entity: str
+  fruit_1_door_entity: str
+  fruit_1_fan_entity: str
+  fruit_1_humidifier_entity: str
+  fruit_1_exhaust_entity: str
+  fruit_1_airflow_entity: str
+  fruit_2_temperature_entity: str
+  fruit_2_humidity_entity: str
+  fruit_2_co2_entity: str
+  fruit_2_lux_entity: str
+  fruit_2_light_entity: str
+  fruit_2_door_entity: str
+  fruit_2_fan_entity: str
+  fruit_2_humidifier_entity: str
+  fruit_2_exhaust_entity: str
+  fruit_2_airflow_entity: str
+  drying_temperature_entity: str
+  drying_humidity_entity: str
+  drying_co2_entity: str
+  drying_lux_entity: str
+  drying_light_entity: str
+  drying_door_entity: str
+  drying_fan_entity: str
+  drying_humidifier_entity: str
+  drying_exhaust_entity: str
+  drying_airflow_entity: str
+  lab_temperature_entity: str
+  lab_humidity_entity: str
+  lab_co2_entity: str
+  lab_lux_entity: str
+  lab_light_entity: str
+  lab_door_entity: str
+  lab_fan_entity: str
+  lab_humidifier_entity: str
+  lab_exhaust_entity: str
+  lab_airflow_entity: str
 
 map:
   - config:rw
