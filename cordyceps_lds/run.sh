@@ -41,6 +41,7 @@ if options_path.exists() and package_path.exists():
     if count != 1:
       print(f'WARNING: {key} is not present in {package_path}', flush=True)
   package_path.write_text(text)
+PY
 
 if [[ -z "${LDS_TOKEN}" ]]; then
   echo "FATAL: no API token set. Set 'token' in the app configuration (or LDS_TOKEN)." >&2
