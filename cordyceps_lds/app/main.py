@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import html
 import io
 import json
 import math
@@ -60,12 +61,29 @@ def require_auth(credentials: HTTPAuthorizationCredentials | None = Depends(secu
 
 @app.get("/", response_class=HTMLResponse)
 def home() -> HTMLResponse:
-    return HTMLResponse("""<!doctype html>
+    with get_db() as connection:
+        batch_count = connection.execute("SELECT COUNT(*) FROM batch_master").fetchone()[0]
+        jar_count = connection.execute("SELECT COUNT(*) FROM jar_master").fetchone()[0]
+        event_count = connection.execute("SELECT COUNT(*) FROM stage_events").fetchone()[0]
+        recent = connection.execute(
+            "SELECT batch_id, jar_id, to_stage, ts, operator FROM stage_events ORDER BY ts DESC, id DESC LIMIT 8"
+        ).fetchall()
+    recent_rows = "".join(
+        f"<tr><td>{html.escape(str(row['batch_id']))}</td>"
+        f"<td>{html.escape(str(row['jar_id'] or '-'))}</td>"
+        f"<td>{html.escape(str(row['to_stage'] or '-'))}</td>"
+        f"<td>{html.escape(str(row['ts']))}</td>"
+        f"<td>{html.escape(str(row['operator'] or '-'))}</td></tr>"
+        for row in recent
+    ) or '<tr><td colspan="5" class="muted">No events recorded yet.</td></tr>'
+    return HTMLResponse(f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cordyceps Lab</title><style>
-:root{color-scheme:light dark;--accent:#d97706}body{font:16px system-ui,sans-serif;max-width:760px;margin:0 auto;padding:32px 20px;background:#101513;color:#f3f4ed}h1{font-size:2rem;margin-bottom:4px}p{color:#b7c2ba}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:28px}a{display:block;padding:18px;border:1px solid #405047;border-radius:8px;color:#f3f4ed;text-decoration:none;background:#19211d}a:hover{border-color:var(--accent)}strong{display:block;color:var(--accent);margin-bottom:6px}@media(prefers-color-scheme:light){body{background:#f6f7f2;color:#202620}p{color:#526057}a{color:#202620;background:#fff;border-color:#ccd5ce}}
+:root{{color-scheme:light dark;--accent:#d97706}}body{{font:16px system-ui,sans-serif;max-width:960px;margin:0 auto;padding:32px 20px;background:#101513;color:#f3f4ed}}h1{{font-size:2rem;margin-bottom:4px}}p{{color:#b7c2ba}}.stats{{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin:28px 0;background:#405047}}.stat{{padding:18px;background:#19211d}}.stat strong{{display:block;font-size:1.8rem;color:var(--accent)}}.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:28px}}a{{display:block;padding:18px;border:1px solid #405047;border-radius:8px;color:#f3f4ed;text-decoration:none;background:#19211d}}a:hover{{border-color:var(--accent)}}strong{{display:block;color:var(--accent);margin-bottom:6px}}table{{width:100%;border-collapse:collapse;margin-top:24px}}th,td{{text-align:left;padding:10px 8px;border-bottom:1px solid #405047;font-size:.9rem}}.muted{{text-align:center}}@media(max-width:600px){{.stats{{grid-template-columns:1fr}}table{{font-size:.75rem}}}}
 </style></head><body><h1>Cordyceps Lab</h1><p>Batch, jar, stage, environment, and harvest data service.</p>
+<div class="stats"><div class="stat"><strong>{batch_count}</strong>Batches</div><div class="stat"><strong>{jar_count}</strong>Jars</div><div class="stat"><strong>{event_count}</strong>Stage events</div></div>
 <div class="grid"><a href="./docs"><strong>API documentation</strong>Explore the service endpoints.</a><a href="./health"><strong>Health check</strong>Verify the service is running.</a><a href="/lovelace/lab-scan"><strong>Open scan dashboard</strong>Resolve and confirm a QR label.</a></div>
+<h2>Recent events</h2><table><thead><tr><th>Batch</th><th>Jar</th><th>Stage</th><th>Time</th><th>Operator</th></tr></thead><tbody>{recent_rows}</tbody></table>
 </body></html>""")
 
 
@@ -294,7 +312,7 @@ class LabelsRequest(ContractModel):
 # It exposes no lab data.
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "version": "2.2.0"}
+    return {"status": "ok", "version": "2.4.0"}
 
 
 # ---------------------------------------------------------------------------
