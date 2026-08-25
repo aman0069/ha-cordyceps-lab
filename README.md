@@ -48,6 +48,10 @@ else. Do not add another file named `config.yaml` anywhere in this repo.
    ```
 5. Start it. Enable **Start on boot** and **Watchdog**.
 
+After it starts, **Cordyceps Lab** appears automatically in the Home Assistant
+sidebar. Open it for the service home page, API documentation, health check, and
+the scan dashboard link.
+
 ### Ports
 
 | | Port | Conflicts? |

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,7 +30,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Cordyceps Lab Data Service", version="2.3.0", lifespan=lifespan)
+app = FastAPI(title="Cordyceps Lab Data Service", version="2.4.0", lifespan=lifespan)
 security = HTTPBearer(auto_error=False)
 SOURCE_VALUES = {"manual", "qr_scan", "sensor", "import", "system"}
 EXPORT_TABLES = {
@@ -56,6 +56,17 @@ def require_auth(credentials: HTTPAuthorizationCredentials | None = Depends(secu
     expected = os.getenv("LDS_TOKEN", "")
     if not expected or credentials is None or credentials.scheme.lower() != "bearer" or credentials.credentials != expected:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid bearer token")
+
+
+@app.get("/", response_class=HTMLResponse)
+def home() -> HTMLResponse:
+    return HTMLResponse("""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cordyceps Lab</title><style>
+:root{color-scheme:light dark;--accent:#d97706}body{font:16px system-ui,sans-serif;max-width:760px;margin:0 auto;padding:32px 20px;background:#101513;color:#f3f4ed}h1{font-size:2rem;margin-bottom:4px}p{color:#b7c2ba}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:28px}a{display:block;padding:18px;border:1px solid #405047;border-radius:8px;color:#f3f4ed;text-decoration:none;background:#19211d}a:hover{border-color:var(--accent)}strong{display:block;color:var(--accent);margin-bottom:6px}@media(prefers-color-scheme:light){body{background:#f6f7f2;color:#202620}p{color:#526057}a{color:#202620;background:#fff;border-color:#ccd5ce}}
+</style></head><body><h1>Cordyceps Lab</h1><p>Batch, jar, stage, environment, and harvest data service.</p>
+<div class="grid"><a href="./docs"><strong>API documentation</strong>Explore the service endpoints.</a><a href="./health"><strong>Health check</strong>Verify the service is running.</a><a href="/lovelace/lab-scan"><strong>Open scan dashboard</strong>Resolve and confirm a QR label.</a></div>
+</body></html>""")
 
 
 def rows(connection: sqlite3.Connection, sql: str, parameters: tuple[Any, ...] = ()) -> list[dict[str, Any]]:

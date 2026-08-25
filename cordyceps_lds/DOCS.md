@@ -6,6 +6,10 @@ FastAPI + SQLite. Listens on 8099 inside the container, published on host port
 
 Verified against HA Core 2026.8.3 / Supervisor 2026.07.5 / HAOS 18.2.
 
+When installed through Home Assistant, the add-on appears automatically in the
+sidebar as **Cordyceps Lab**. Its panel is provided through HA ingress and does
+not require exposing the add-on port to the network.
+
 ## Configuration
 
 | Option | Required | What it does |

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.0
+
+### Added
+- Home Assistant ingress and sidebar panel named **Cordyceps Lab**.
+- A small service home page with health, API documentation, and scan dashboard links.
+
 ## 2.3.0
 
 ### Added
