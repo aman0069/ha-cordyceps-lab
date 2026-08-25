@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.0
+
+### Changed
+- Release version for the daily cultivation workbench and sidebar app.
+
 ## 2.4.0
 
 ### Added

@@ -5,7 +5,7 @@
 # Do not add another file named config.yaml anywhere inside this folder.
 name: Cordyceps Lab Data Service
 slug: cordyceps_lds
-version: "2.4.0"
+version: "2.5.0"
 description: FastAPI and SQLite batch, jar, and stage tracking service for Cordyceps Lab v2
 url: https://github.com/aman0069/ha-cordyceps-lab
 
