@@ -5,6 +5,8 @@
 ### Added
 - Home Assistant ingress and sidebar panel named **Cordyceps Lab**.
 - A small service home page with health, API documentation, and scan dashboard links.
+- Tablet-first daily workbench with server-side batch, stage, transfer, observation,
+  harvest, and record lookup forms. Existing JSON API routes remain unchanged.
 
 ## 2.3.0
 
