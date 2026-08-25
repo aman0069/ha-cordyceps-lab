@@ -178,5 +178,5 @@ schema:
   lab_airflow_entity: str
 
 map:
-  - config:rw
+  - homeassistant_config:rw
   - share:rw
