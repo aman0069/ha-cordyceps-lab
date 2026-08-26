@@ -5,7 +5,7 @@
 # Do not add another file named config.yaml anywhere inside this folder.
 name: Cordyceps Lab Data Service
 slug: cordyceps_lds
-version: "2.3.1"
+version: "2.5.1"
 description: FastAPI and SQLite batch, jar, and stage tracking service for Cordyceps Lab v2
 url: https://github.com/aman0069/ha-cordyceps-lab
 
@@ -20,6 +20,10 @@ arch:
 init: false
 startup: services
 boot: auto
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:mushroom-outline
+panel_title: Cordyceps Lab
 
 # PORT MAPPING: "<container port>/tcp: <host port>".
 #
@@ -178,5 +182,5 @@ schema:
   lab_airflow_entity: str
 
 map:
-  - config:rw
+  - homeassistant_config:rw
   - share:rw
