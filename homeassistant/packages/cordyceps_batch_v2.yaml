@@ -158,6 +158,22 @@ input_select:
       - discard
       - final_yield
     initial: none
+    cm2_transfer_step:
+      name: "CM2 transfer task"
+      icon: mdi:format-list-numbered
+      options:
+        - scan
+        - action
+        - operator
+        - source
+        - destination
+        - rack
+        - reason
+        - colonization
+        - moisture
+        - environment
+        - confirm
+      initial: scan
   cm2_operator:
     name: "CM2 operator"
     icon: mdi:account-hard-hat
@@ -603,6 +619,11 @@ script:
           option: none
       - action: input_select.select_option
         target:
+          entity_id: input_select.cm2_transfer_step
+        data:
+          option: scan
+      - action: input_select.select_option
+        target:
           entity_id:
             - input_select.cm2_dest_chamber
             - input_select.cm2_source_location
@@ -674,6 +695,16 @@ script:
               - action: input_boolean.turn_on
                 target:
                   entity_id: input_boolean.cm2_scan_confirm_armed
+              - action: input_select.select_option
+                target:
+                  entity_id: input_select.cm2_pending_action
+                data:
+                  option: transfer_dark_to_light
+              - action: input_select.select_option
+                target:
+                  entity_id: input_select.cm2_transfer_step
+                data:
+                  option: action
           - conditions: []
             sequence:
               - action: input_boolean.turn_off
@@ -686,6 +717,86 @@ script:
                     LDS could not resolve this token (HTTP {{ resolve_response.status | default('no response', true) }}).
                     Confirmation was not armed and no record was changed.
                   notification_id: cm2_scan_resolve_error
+
+  cm2_next_transfer_task:
+    alias: "CM2 · Complete current transfer task"
+    icon: mdi:arrow-right-circle-outline
+    mode: single
+    sequence:
+      - variables:
+          step: "{{ states('input_select.cm2_transfer_step') }}"
+          operator: "{{ states('input_select.cm2_operator') }}"
+          source_location: "{{ states('input_select.cm2_source_location') }}"
+          dest_chamber: "{{ states('input_select.cm2_dest_chamber') }}"
+          rack_shelf: "{{ states('input_text.cm2_rack_shelf') | trim }}"
+          reason: "{{ states('input_text.cm2_reason') | trim }}"
+          colonization: "{{ states('input_number.cm2_colonization_pct') }}"
+          moisture_level: "{{ states('input_select.cm2_moisture_level') }}"
+          missing: >-
+            {% if step == 'action' and states('input_select.cm2_pending_action') != 'transfer_dark_to_light' %}dark-to-light transfer action
+            {% elif step == 'operator' and operator in ['', 'unknown', 'unavailable', 'none', '-- select operator --'] %}operator
+            {% elif step == 'source' and source_location in ['', 'unknown', 'unavailable', 'none', '-- select chamber --'] %}source location
+            {% elif step == 'destination' and dest_chamber in ['', 'unknown', 'unavailable', 'none', '-- select chamber --'] %}destination chamber
+            {% elif step == 'rack' and rack_shelf in ['', 'unknown', 'unavailable', 'none'] %}rack / shelf
+            {% elif step == 'reason' and reason in ['', 'unknown', 'unavailable', 'none'] %}reason
+            {% elif step == 'colonization' and colonization in ['', 'unknown', 'unavailable', 'none'] %}colonization %
+            {% elif step == 'moisture' and moisture_level in ['', 'unknown', 'unavailable', 'none', '-- select moisture --'] %}moisture level
+            {% endif %}
+      - choose:
+          - conditions: "{{ missing | trim != '' }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "CM2 task required"
+                  message: "Complete {{ missing }} before continuing. No event was changed."
+                  notification_id: cm2_transfer_task_required
+              - stop: "Current transfer task is incomplete."
+      - choose:
+          - conditions: "{{ step == 'action' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: operator}
+          - conditions: "{{ step == 'operator' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: source}
+          - conditions: "{{ step == 'source' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: destination}
+          - conditions: "{{ step == 'destination' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: rack}
+          - conditions: "{{ step == 'rack' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: reason}
+          - conditions: "{{ step == 'reason' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: colonization}
+          - conditions: "{{ step == 'colonization' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: moisture}
+          - conditions: "{{ step == 'moisture' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: environment}
+          - conditions: "{{ step == 'environment' }}"
+            sequence:
+              - action: input_select.select_option
+                target: {entity_id: input_select.cm2_transfer_step}
+                data: {option: confirm}
 
   cm2_confirm_and_commit:
     alias: "CM2 · Confirm and commit armed scan action"

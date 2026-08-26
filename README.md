@@ -48,10 +48,6 @@ else. Do not add another file named `config.yaml` anywhere in this repo.
    ```
 5. Start it. Enable **Start on boot** and **Watchdog**.
 
-After it starts, **Cordyceps Lab** appears automatically in the Home Assistant
-sidebar. Open it for the service home page, API documentation, health check, and
-the scan dashboard link.
-
 ### Ports
 
 | | Port | Conflicts? |
@@ -114,7 +110,9 @@ lds_token: "the-same-long-random-string"
 3. Entity IDs are configured in the add-on **Configuration** tab. Where a
   sensor does not exist, leave its field empty — the payload emits `null` with
   `_src: missing`, never a zero or a last-known value.
-4. Add the three files in `homeassistant/dashboards/` as Lovelace views.
+4. Add the four files in `homeassistant/dashboards/` as Lovelace views. The
+  `view_live_monitor.yaml` view provides the dark live-monitor layout; the
+  Transfer Queue keeps its one-required-task-per-screen workflow.
 5. Restart. `sensor.cm2_lds_status` should read `ok`.
 6. Wire the tablet scanner per `homeassistant/lab-scan.md`.
 

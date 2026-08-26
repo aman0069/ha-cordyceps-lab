@@ -1,0 +1,182 @@
+title: Live Monitor
+path: cm2-live-monitor
+icon: mdi:mushroom
+type: masonry
+cards:
+  - type: markdown
+    content: |
+      # Cordyceps Cultivation Lab
+      **AryaGro Tech | live batch and environmental operations**
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg, #0f172a, #164e63 55%, #052e16);
+          border-left: 3px solid #06b6d4;
+          border-radius: 12px;
+          box-shadow: 0 6px 20px rgba(0,0,0,0.45), 0 0 15px rgba(6,182,212,0.15);
+        }
+
+  - type: grid
+    columns: 4
+    square: false
+    cards:
+      - type: entity
+        entity: sensor.cm2_lds_status
+        name: LDS Status
+        icon: mdi:server-check
+      - type: entity
+        entity: sensor.cm2_transfer_queue_count
+        name: Transfer Queue
+        icon: mdi:tray-arrow-right
+      - type: entity
+        entity: sensor.cm2_data_completeness
+        name: Data Completeness
+        icon: mdi:database-check-outline
+      - type: entity
+        entity: input_boolean.cm2_scan_confirm_armed
+        name: Confirmation Armed
+        icon: mdi:shield-check-outline
+
+  - type: markdown
+    content: |
+      ## Selected cultivation record
+    card_mod:
+      style: |
+        ha-card {
+          background: rgba(15, 23, 42, 0.96);
+          border-left: 3px solid #06b6d4;
+          border-radius: 10px;
+        }
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: entities
+        title: Current record
+        show_header_toggle: false
+        state_color: true
+        entities:
+          - entity: input_text.cm2_selected_name
+            name: Batch / jar
+          - entity: input_text.cm2_selected_id
+            name: Identifier
+          - entity: sensor.cm2_selected_batch_stage
+            name: Current stage
+          - entity: sensor.cm2_selected_timeline
+            name: Timeline data
+      - type: gauge
+        entity: sensor.cm2_data_completeness
+        name: Record completeness
+        min: 0
+        max: 100
+        needle: true
+        severity:
+          green: 90
+          yellow: 70
+          red: 0
+
+  - type: custom:mushroom-chips-card
+    alignment: justify
+    chips:
+      - type: template
+        content: Autoclaved
+        icon: mdi:pressure-gauge
+        icon_color: >-
+          {{ 'teal' if states('sensor.cm2_selected_batch_stage') == 'autoclaved' else 'grey' }}
+      - type: template
+        content: Inoculated
+        icon: mdi:needle
+        icon_color: >-
+          {{ 'teal' if states('sensor.cm2_selected_batch_stage') == 'inoculated' else 'grey' }}
+      - type: template
+        content: Dark incubation
+        icon: mdi:weather-night
+        icon_color: >-
+          {{ 'teal' if states('sensor.cm2_selected_batch_stage') == 'dark_incubation' else 'grey' }}
+      - type: template
+        content: Light
+        icon: mdi:weather-sunny
+        icon_color: >-
+          {{ 'teal' if states('sensor.cm2_selected_batch_stage') == 'transferred_to_light' else 'grey' }}
+      - type: template
+        content: Primordia
+        icon: mdi:sprout
+        icon_color: >-
+          {{ 'teal' if states('sensor.cm2_selected_batch_stage') == 'primordia_observed' else 'grey' }}
+      - type: template
+        content: Fruiting
+        icon: mdi:mushroom
+        icon_color: >-
+          {{ 'teal' if states('sensor.cm2_selected_batch_stage') == 'fruiting' else 'grey' }}
+      - type: template
+        content: Harvested
+        icon: mdi:scale
+        icon_color: >-
+          {{ 'teal' if states('sensor.cm2_selected_batch_stage') == 'harvested' else 'grey' }}
+
+  - type: markdown
+    content: |
+      ## Cultivation timing
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg, #052e16, #064e3b, #0f172a);
+          border-left: 3px solid #22c55e;
+          border-radius: 12px;
+          box-shadow: 0 6px 20px rgba(0,0,0,0.45), 0 0 15px rgba(34,197,94,0.15);
+        }
+
+  - type: grid
+    columns: 3
+    square: false
+    cards:
+      - type: statistic
+        entity: sensor.cm2_duration_autoclave_to_inoculation
+        name: Autoclave to inoculation
+        stat_type: mean
+      - type: statistic
+        entity: sensor.cm2_duration_inoculation_to_transfer
+        name: Inoculation to transfer
+        stat_type: mean
+      - type: statistic
+        entity: sensor.cm2_duration_transfer_to_primordia
+        name: Transfer to primordia
+        stat_type: mean
+
+  - type: entities
+    title: Additional cycle timing
+    show_header_toggle: false
+    state_color: true
+    entities:
+      - entity: sensor.cm2_duration_primordia_to_harvest
+        name: Primordia to harvest
+      - entity: sensor.cm2_duration_total_cycle
+        name: Total cycle
+      - entity: sensor.cm2_selected_timeline
+        name: Timeline source
+
+  - type: conditional
+    conditions:
+      - entity: sensor.cm2_transfer_queue_count
+        state_not: "0"
+    card:
+      type: custom:mushroom-template-card
+      entity: sensor.cm2_transfer_queue_count
+      primary: Transfer tasks waiting
+      secondary: Open Transfer Queue to complete mandatory tasks one screen at a time.
+      icon: mdi:clipboard-alert-outline
+      icon_color: amber
+      tap_action:
+        action: navigate
+        navigation_path: /lovelace/cm2-transfer-queue
+
+  - type: custom:mushroom-template-card
+    entity: input_text.cm2_selected_id
+    primary: Open selected batch timeline
+    secondary: Review stage history, locations, timestamps, and sensor completeness.
+    icon: mdi:timeline-clock-outline
+    icon_color: teal
+    tap_action:
+      action: navigate
+      navigation_path: /lovelace/cm2-batch-timeline

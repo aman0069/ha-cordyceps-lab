@@ -6,7 +6,14 @@ QR labels contain only an opaque LDS token in this form:
 http://homeassistant.local:8123/lab-scan?t=<scan_token>
 ```
 
-Create a Lovelace view at path `lab-scan`. Put a Markdown card on it showing `input_text.cm2_selected_name`, `input_select.cm2_pending_action`, and a **Confirm** button that calls `script.cm2_confirm_and_commit`. The scanner must put the token (or the complete URL) into `input_text.cm2_scan_payload`, then call `script.cm2_resolve_scan`. Resolution only arms the 120-second confirmation window; it never writes an LDS event.
+Create a Lovelace view at path `lab-scan`. The transfer queue presents the
+mandatory tasks one screen at a time: scan, action, operator, source chamber,
+destination chamber, rack/shelf, reason, colonization, moisture, environment,
+and final confirmation. `script.cm2_next_transfer_task` blocks progression when
+the current required value is blank. The scanner must put the token (or the
+complete URL) into `input_text.cm2_scan_payload`, then call
+`script.cm2_resolve_scan`. Resolution only arms the 120-second confirmation
+window; it never writes an LDS event.
 
 ## Option 1 — Fully Kiosk Browser URL intent
 
