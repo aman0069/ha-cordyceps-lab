@@ -1,17 +1,14 @@
 # Changelog
 
-## 2.5.0
-
-### Changed
-- Release version for the daily cultivation workbench and sidebar app.
-
-## 2.4.0
+## 2.3.1
 
 ### Added
-- Home Assistant ingress and sidebar panel named **Cordyceps Lab**.
-- A small service home page with health, API documentation, and scan dashboard links.
-- Tablet-first daily workbench with server-side batch, stage, transfer, observation,
-  harvest, and record lookup forms. Existing JSON API routes remain unchanged.
+- Live Monitor dashboard styled for dark, cyan, and green environmental views.
+- Transfer Queue presents mandatory transfer fields one task per screen and
+  blocks progression until the current required value is complete.
+
+### Fixed
+- Health endpoint version now matches the add-on and FastAPI version.
 
 ## 2.3.0
 
