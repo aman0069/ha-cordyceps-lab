@@ -4,6 +4,11 @@ Batch, jar, stage, and observation store for the Cordyceps militaris lab.
 FastAPI + SQLite. Listens on 8099 inside the container, published on host port
 8189 by default.
 
+The app enables Home Assistant ingress and publishes a **Cordyceps Lab** panel
+in the Home Assistant sidebar. After updating or reinstalling the app, refresh
+the Supervisor app store and start the app. The panel requires `ingress: true`
+and is configured by `panel_title` and `panel_icon` in `config.yaml`.
+
 Verified against HA Core 2026.8.3 / Supervisor 2026.07.5 / HAOS 18.2.
 
 ## Configuration
@@ -81,10 +86,20 @@ Autoclave defaults are configurable in the app Configuration tab with
 pressure defaults but uses a shorter 30-minute duration by default.
 
 The standard Home Assistant app configuration cannot query the entity registry
-to render a dynamic entity picker. The existing sensor map therefore remains
-the advanced configuration surface and preserves explicit `none`/`missing`
-semantics; entity selection can be added through a custom HA frontend or an
-entity-registry-aware integration later.
+to render a dynamic entity picker. Dynamic entity selection is not supported in
+the standard Home Assistant app `config.yaml` configuration interface because
+the Supervisor does not expose the Home Assistant entity registry there. Sensor
+entities must therefore be configured explicitly using their Entity IDs. The
+existing sensor map remains grouped by room/environment, preserves explicit
+`none`/`missing` semantics, and accepts `sensor.*`, `binary_sensor.*`,
+`switch.*`, and other valid Home Assistant entity ID formats.
+
+At startup, malformed optional IDs are logged as warnings and disabled rather
+than preventing the service from starting. The add-on cannot independently
+verify whether an entity exists or whether its live state is available without
+Home Assistant API access; the Home Assistant package handles unavailable
+states as `NULL` with a `missing` source flag. Replace a deleted or unavailable
+entity in the app Configuration tab and restart the app.
 
 `/health` and `/s/<token>` are unauthenticated — the first so the Supervisor
 watchdog can poll it, the second because the tablet's browser follows it before

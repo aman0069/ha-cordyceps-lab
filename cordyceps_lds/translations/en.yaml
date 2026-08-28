@@ -1,0 +1,201 @@
+configuration:
+  token:
+    name: API token
+    description: Required bearer token. Use a long random value and keep it equal to the Home Assistant lds_token secret.
+  timezone:
+    name: Lab timezone
+    description: Timezone used for timestamps, for example Asia/Kolkata.
+  ha_base_url:
+    name: Home Assistant URL
+    description: Base URL used by QR labels for the lab-scan redirect.
+  autoclave_default_temperature_c:
+    name: Default autoclave temperature
+    description: Temperature in degrees Celsius used when a cycle does not override it.
+  autoclave_default_pressure_psi:
+    name: Default autoclave pressure
+    description: Pressure in psi used when a cycle does not override it.
+  autoclave_default_duration_min:
+    name: Default autoclave duration
+    description: Duration in minutes used for jars and other items when a cycle does not override it.
+  dark_room_temperature_entity:
+    name: Dark room temperature entity
+    description: Optional Home Assistant Entity ID, such as sensor.dark_room_temperature. Leave empty if unavailable.
+  dark_room_humidity_entity:
+    name: Dark room humidity entity
+    description: Optional percentage sensor Entity ID.
+  dark_room_co2_entity:
+    name: Dark room CO2 entity
+    description: Optional carbon-dioxide sensor Entity ID.
+  dark_room_lux_entity:
+    name: Dark room illuminance entity
+    description: Optional lux sensor Entity ID.
+  dark_room_light_entity:
+    name: Dark room light entity
+    description: Optional light or switch Entity ID.
+  dark_room_door_entity:
+    name: Dark room door entity
+    description: Optional door binary-sensor Entity ID.
+  dark_room_fan_entity:
+    name: Dark room fan entity
+    description: Optional fan or switch Entity ID.
+  dark_room_humidifier_entity:
+    name: Dark room humidifier entity
+    description: Optional humidifier or switch Entity ID.
+  dark_room_exhaust_entity:
+    name: Dark room exhaust entity
+    description: Optional exhaust fan or switch Entity ID.
+  dark_room_airflow_entity:
+    name: Dark room airflow entity
+    description: Optional airflow sensor Entity ID.
+  light_room_temperature_entity:
+    name: Light room temperature entity
+    description: Optional temperature sensor Entity ID.
+  light_room_humidity_entity:
+    name: Light room humidity entity
+    description: Optional percentage sensor Entity ID.
+  light_room_co2_entity:
+    name: Light room CO2 entity
+    description: Optional carbon-dioxide sensor Entity ID.
+  light_room_lux_entity:
+    name: Light room illuminance entity
+    description: Optional lux sensor Entity ID.
+  light_room_light_entity:
+    name: Light room light entity
+    description: Optional light or switch Entity ID.
+  light_room_door_entity:
+    name: Light room door entity
+    description: Optional door binary-sensor Entity ID.
+  light_room_fan_entity:
+    name: Light room fan entity
+    description: Optional fan or switch Entity ID.
+  light_room_humidifier_entity:
+    name: Light room humidifier entity
+    description: Optional humidifier or switch Entity ID.
+  light_room_exhaust_entity:
+    name: Light room exhaust entity
+    description: Optional exhaust fan or switch Entity ID.
+  light_room_airflow_entity:
+    name: Light room airflow entity
+    description: Optional airflow sensor Entity ID.
+  fruit_1_temperature_entity:
+    name: Fruit room 1 temperature entity
+    description: Optional temperature sensor Entity ID.
+  fruit_1_humidity_entity:
+    name: Fruit room 1 humidity entity
+    description: Optional percentage sensor Entity ID.
+  fruit_1_co2_entity:
+    name: Fruit room 1 CO2 entity
+    description: Optional carbon-dioxide sensor Entity ID.
+  fruit_1_lux_entity:
+    name: Fruit room 1 illuminance entity
+    description: Optional lux sensor Entity ID.
+  fruit_1_light_entity:
+    name: Fruit room 1 light entity
+    description: Optional light or switch Entity ID.
+  fruit_1_door_entity:
+    name: Fruit room 1 door entity
+    description: Optional door binary-sensor Entity ID.
+  fruit_1_fan_entity:
+    name: Fruit room 1 fan entity
+    description: Optional fan or switch Entity ID.
+  fruit_1_humidifier_entity:
+    name: Fruit room 1 humidifier entity
+    description: Optional humidifier or switch Entity ID.
+  fruit_1_exhaust_entity:
+    name: Fruit room 1 exhaust entity
+    description: Optional exhaust fan or switch Entity ID.
+  fruit_1_airflow_entity:
+    name: Fruit room 1 airflow entity
+    description: Optional airflow sensor Entity ID.
+  fruit_2_temperature_entity:
+    name: Fruit room 2 temperature entity
+    description: Optional temperature sensor Entity ID.
+  fruit_2_humidity_entity:
+    name: Fruit room 2 humidity entity
+    description: Optional percentage sensor Entity ID.
+  fruit_2_co2_entity:
+    name: Fruit room 2 CO2 entity
+    description: Optional carbon-dioxide sensor Entity ID.
+  fruit_2_lux_entity:
+    name: Fruit room 2 illuminance entity
+    description: Optional lux sensor Entity ID.
+  fruit_2_light_entity:
+    name: Fruit room 2 light entity
+    description: Optional light or switch Entity ID.
+  fruit_2_door_entity:
+    name: Fruit room 2 door entity
+    description: Optional door binary-sensor Entity ID.
+  fruit_2_fan_entity:
+    name: Fruit room 2 fan entity
+    description: Optional fan or switch Entity ID.
+  fruit_2_humidifier_entity:
+    name: Fruit room 2 humidifier entity
+    description: Optional humidifier or switch Entity ID.
+  fruit_2_exhaust_entity:
+    name: Fruit room 2 exhaust entity
+    description: Optional exhaust fan or switch Entity ID.
+  fruit_2_airflow_entity:
+    name: Fruit room 2 airflow entity
+    description: Optional airflow sensor Entity ID.
+  drying_temperature_entity:
+    name: Drying room temperature entity
+    description: Optional temperature sensor Entity ID.
+  drying_humidity_entity:
+    name: Drying room humidity entity
+    description: Optional percentage sensor Entity ID.
+  drying_co2_entity:
+    name: Drying room CO2 entity
+    description: Optional carbon-dioxide sensor Entity ID.
+  drying_lux_entity:
+    name: Drying room illuminance entity
+    description: Optional lux sensor Entity ID.
+  drying_light_entity:
+    name: Drying room light entity
+    description: Optional light or switch Entity ID.
+  drying_door_entity:
+    name: Drying room door entity
+    description: Optional door binary-sensor Entity ID.
+  drying_fan_entity:
+    name: Drying room fan entity
+    description: Optional fan or switch Entity ID.
+  drying_humidifier_entity:
+    name: Drying room humidifier entity
+    description: Optional humidifier or switch Entity ID.
+  drying_exhaust_entity:
+    name: Drying room exhaust entity
+    description: Optional exhaust fan or switch Entity ID.
+  drying_airflow_entity:
+    name: Drying room airflow entity
+    description: Optional airflow sensor Entity ID.
+  lab_temperature_entity:
+    name: Lab temperature entity
+    description: Optional temperature sensor Entity ID.
+  lab_humidity_entity:
+    name: Lab humidity entity
+    description: Optional percentage sensor Entity ID.
+  lab_co2_entity:
+    name: Lab CO2 entity
+    description: Optional carbon-dioxide sensor Entity ID.
+  lab_lux_entity:
+    name: Lab illuminance entity
+    description: Optional lux sensor Entity ID.
+  lab_light_entity:
+    name: Lab light entity
+    description: Optional light or switch Entity ID.
+  lab_door_entity:
+    name: Lab door entity
+    description: Optional door binary-sensor Entity ID.
+  lab_fan_entity:
+    name: Lab fan entity
+    description: Optional fan or switch Entity ID.
+  lab_humidifier_entity:
+    name: Lab humidifier entity
+    description: Optional humidifier or switch Entity ID.
+  lab_exhaust_entity:
+    name: Lab exhaust entity
+    description: Optional exhaust fan or switch Entity ID.
+  lab_airflow_entity:
+    name: Lab airflow entity
+    description: Optional airflow sensor Entity ID.
+network:
+  8099/TCP: QR redirect, REST API, and ingress panel

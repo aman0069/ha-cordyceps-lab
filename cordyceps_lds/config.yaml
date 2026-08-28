@@ -20,6 +20,10 @@ arch:
 init: false
 startup: services
 boot: auto
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:flask-outline
+panel_title: Cordyceps Lab
 
 # PORT MAPPING: "<container port>/tcp: <host port>".
 #

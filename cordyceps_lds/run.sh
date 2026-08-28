@@ -38,7 +38,8 @@ if options_path.exists() and package_path.exists():
       continue
     value = str(raw_value or 'none').strip()
     if value != 'none' and not re.fullmatch(r'[a-z_]+\.[a-z0-9_]+', value):
-      raise SystemExit(f'Invalid entity ID for {key}: {value}')
+      print(f'WARNING: ignoring invalid optional entity ID for {key}: {value}', flush=True)
+      value = 'none'
     pattern = rf'^(\s+{re.escape(key)}:\s+&\S+\s+)(\S+)(\s+# EDIT_ME\s*)$'
     text, count = re.subn(pattern, rf'\g<1>{value}\g<3>', text, count=1, flags=re.MULTILINE)
     if count != 1:
