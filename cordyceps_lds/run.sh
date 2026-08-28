@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/with-contenv bashio
 # Entry point for both the Home Assistant app (options.json) and plain Docker
 # Compose / systemd (environment variables). Environment always wins.
 set -euo pipefail
@@ -17,6 +17,9 @@ export TZ="${TZ:-$(opt timezone 'Asia/Kolkata')}"
 # Redirect target for printed QR labels (see /s/<token> in app/main.py).
 export HA_BASE_URL="${HA_BASE_URL:-$(opt ha_base_url 'http://homeassistant.local:8123')}"
 export LDS_DATA_DIR="${LDS_DATA_DIR:-/data}"
+export AUTOCLAVE_DEFAULT_TEMPERATURE_C="${AUTOCLAVE_DEFAULT_TEMPERATURE_C:-$(opt autoclave_default_temperature_c '121')}"
+export AUTOCLAVE_DEFAULT_PRESSURE_PSI="${AUTOCLAVE_DEFAULT_PRESSURE_PSI:-$(opt autoclave_default_pressure_psi '15')}"
+export AUTOCLAVE_DEFAULT_DURATION_MIN="${AUTOCLAVE_DEFAULT_DURATION_MIN:-$(opt autoclave_default_duration_min '120')}"
 
 # Apply entity IDs entered in the add-on Configuration tab to the HA package
 # copied into /config. Empty values intentionally become `none`.

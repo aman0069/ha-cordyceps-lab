@@ -1,4 +1,241 @@
-title: Live Monitor
+title: Lab Operations
+path: cm2-live-monitor
+icon: mdi:flask-outline
+type: masonry
+cards:
+  - type: markdown
+    content: |
+      # Cordyceps Lab
+      ## Operations board
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg, #111827, #12343b 60%, #1f2937);
+          border: 1px solid #28545c;
+          border-left: 5px solid #2dd4bf;
+          border-radius: 8px;
+          padding: 8px 16px;
+        }
+        h1 { color: #f8fafc; letter-spacing: 0; }
+        h2 { color: #8be0d2; letter-spacing: 0; }
+
+  - type: grid
+    columns: 4
+    square: false
+    cards:
+      - type: custom:mushroom-template-card
+        entity: sensor.cm2_dashboard_summary
+        primary: Active batches
+        secondary: "{{ state_attr('sensor.cm2_dashboard_summary', 'active_batches') | default(0) }} in cultivation"
+        icon: mdi:layers-triple-outline
+        icon_color: teal
+      - type: custom:mushroom-template-card
+        entity: sensor.cm2_dashboard_summary
+        primary: Jars in motion
+        secondary: "{{ state_attr('sensor.cm2_dashboard_summary', 'total_jars') | default(0) }} tracked"
+        icon: mdi:beaker-outline
+        icon_color: blue
+      - type: custom:mushroom-template-card
+        entity: sensor.cm2_dashboard_summary
+        primary: Liquid cultures
+        secondary: "{{ state_attr('sensor.cm2_dashboard_summary', 'active_cultures') | default(0) }} active"
+        icon: mdi:flask-round-bottom-outline
+        icon_color: amber
+      - type: custom:mushroom-template-card
+        entity: sensor.cm2_dashboard_summary
+        primary: Harvest ready
+        secondary: "{{ state_attr('sensor.cm2_dashboard_summary', 'harvest_ready') | default(0) }} records"
+        icon: mdi:basket-check-outline
+        icon_color: green
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "## Log a cycle"
+          - type: entities
+            title: Autoclave
+            show_header_toggle: false
+            entities:
+              - entity: input_select.cm2_autoclave_material
+                name: Material
+              - entity: input_number.cm2_autoclave_quantity
+                name: Quantity
+              - entity: input_number.cm2_autoclave_temperature_c
+                name: Temperature
+              - entity: input_number.cm2_autoclave_pressure_psi
+                name: Pressure
+              - entity: input_number.cm2_autoclave_duration_min
+                name: Duration
+          - type: custom:mushroom-template-card
+            entity: script.cm2_log_autoclave
+            primary: Log autoclave cycle
+            secondary: Defaults are prefilled; edit only when this cycle differs.
+            icon: mdi:autoclave
+            icon_color: amber
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              target:
+                entity_id: script.cm2_log_autoclave
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "## Fast paths"
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: button
+                name: New jar batch
+                icon: mdi:package-variant-plus
+                tap_action:
+                  action: call-service
+                  service: script.turn_on
+                  target:
+                    entity_id: script.cm2_create_batch
+              - type: button
+                name: Scan a jar
+                icon: mdi:qrcode-scan
+                tap_action:
+                  action: navigate
+                  navigation_path: /lovelace/cm2-transfer-queue
+              - type: button
+                name: Inoculation
+                icon: mdi:needle
+                tap_action:
+                  action: navigate
+                  navigation_path: /lovelace/cm2-batch-timeline
+              - type: button
+                name: Harvest
+                icon: mdi:basket-check
+                tap_action:
+                  action: navigate
+                  navigation_path: /lovelace/cm2-batch-timeline
+          - type: entities
+            title: System status
+            show_header_toggle: false
+            entities:
+              - entity: sensor.cm2_lds_status
+                name: Data service
+              - entity: sensor.cm2_transfer_queue_count
+                name: Transfer queue
+              - entity: input_boolean.cm2_scan_confirm_armed
+                name: Scan confirmation
+
+  - type: markdown
+    content: "## Equipment and workflow"
+  - type: grid
+    columns: 4
+    square: false
+    cards:
+      - type: custom:mushroom-template-card
+        entity: sensor.cm2_lds_status
+        primary: Data service
+        secondary: "{{ states('sensor.cm2_lds_status') | title }}"
+        icon: mdi:server-check-outline
+        icon_color: green
+      - type: custom:mushroom-template-card
+        entity: sensor.cm2_transfer_queue_count
+        primary: Dark room queue
+        secondary: "{{ states('sensor.cm2_transfer_queue_count') }} waiting"
+        icon: mdi:weather-night
+        icon_color: amber
+        tap_action:
+          action: navigate
+          navigation_path: /lovelace/cm2-transfer-queue
+      - type: custom:mushroom-template-card
+        entity: input_boolean.cm2_scan_confirm_armed
+        primary: Scan safeguard
+        secondary: "{{ states('input_boolean.cm2_scan_confirm_armed') | title }}"
+        icon: mdi:shield-check-outline
+        icon_color: teal
+      - type: custom:mushroom-template-card
+        entity: sensor.cm2_selected_batch_stage
+        primary: Selected record
+        secondary: "{{ states('sensor.cm2_selected_batch_stage') | replace('_', ' ') | title }}"
+        icon: mdi:timeline-clock-outline
+        icon_color: blue
+        tap_action:
+          action: navigate
+          navigation_path: /lovelace/cm2-batch-timeline
+
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "## Selected record"
+          - type: entities
+            show_header_toggle: false
+            state_color: true
+            entities:
+              - entity: input_text.cm2_selected_name
+                name: Record
+              - entity: input_text.cm2_selected_id
+                name: Identifier
+              - entity: sensor.cm2_selected_batch_stage
+                name: Stage
+              - entity: sensor.cm2_data_completeness
+                name: Completeness
+          - type: custom:mushroom-template-card
+            entity: script.cm2_resolve_scan
+            primary: Resolve scanned label
+            secondary: Scan selects a record; confirmation is still required to write.
+            icon: mdi:qrcode-scan
+            icon_color: teal
+            tap_action:
+              action: call-service
+              service: script.turn_on
+              target:
+                entity_id: script.cm2_resolve_scan
+      - type: vertical-stack
+        cards:
+          - type: markdown
+            content: "## Stage pulse"
+          - type: entities
+            title: Timing
+            show_header_toggle: false
+            entities:
+              - entity: sensor.cm2_duration_autoclave_to_inoculation
+                name: Autoclave to inoculation
+              - entity: sensor.cm2_duration_inoculation_to_transfer
+                name: Inoculation to transfer
+              - entity: sensor.cm2_duration_transfer_to_primordia
+                name: Transfer to primordia
+              - entity: sensor.cm2_duration_primordia_to_harvest
+                name: Primordia to harvest
+              - entity: sensor.cm2_duration_total_cycle
+                name: Total cycle
+
+  - type: conditional
+    conditions:
+      - entity: sensor.cm2_transfer_queue_count
+        state_not: "0"
+    card:
+      type: custom:mushroom-template-card
+      entity: sensor.cm2_transfer_queue_count
+      primary: Transfer queue needs attention
+      secondary: Open the guided queue to complete one required task at a time.
+      icon: mdi:clipboard-alert-outline
+      icon_color: amber
+      tap_action:
+        action: navigate
+        navigation_path: /lovelace/cm2-transfer-queue
+
+  - type: markdown
+    content: >
+      ## Recent activity
+      {% for item in state_attr('sensor.cm2_dashboard_summary', 'recent_activity') | default([], true) %}
+      - **{{ item.event_type | replace('_', ' ') | title }}** · {{ item.source_id | default('unassigned', true) }} · {{ item.ts }}
+      {% else %}
+      No activity has been recorded yet.
+      {% endfor %}title: Live Monitor
 path: cm2-live-monitor
 icon: mdi:mushroom
 type: masonry

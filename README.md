@@ -23,7 +23,6 @@ samples/              Real label sheet + generated learning report
 Only `cordyceps_lds/` contains a `config.yaml`, so Supervisor ignores everything
 else. Do not add another file named `config.yaml` anywhere in this repo.
 
----
 
 ## 1. Install the app
 
@@ -48,6 +47,14 @@ else. Do not add another file named `config.yaml` anywhere in this repo.
    ```
 5. Start it. Enable **Start on boot** and **Watchdog**.
 
+
+## Local app development
+
+The repository includes the Home Assistant app devcontainer used by the
+official app tutorial. Install the VS Code Dev Containers extension, open this
+folder, and choose **Reopen in Container** when prompted. Run the **Start Home
+Assistant** task to bootstrap a local Supervisor instance at
+`http://localhost:7123/`; `cordyceps_lds/` is then discovered as a local app.
 ### Ports
 
 | | Port | Conflicts? |

@@ -109,6 +109,6 @@ jobs:
         run: |
           cfg=$(grep -oP '^version:\s*"\K[^"]+' cordyceps_lds/config.yaml)
           dkr=$(grep -oP 'ARG BUILD_VERSION="\K[^"]+' cordyceps_lds/Dockerfile)
-          app=$(grep -oP 'version="\K[0-9.]+' cordyceps_lds/app/main.py | head -1)
+          app=$(grep -oP '^APP_VERSION = "\K[0-9.]+' cordyceps_lds/app/main.py)
           echo "config=$cfg dockerfile=$dkr app=$app"
           test "$cfg" = "$dkr" -a "$cfg" = "$app" || { echo "Version mismatch"; exit 1; }

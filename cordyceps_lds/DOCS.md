@@ -6,11 +6,13 @@ FastAPI + SQLite. Listens on 8099 inside the container, published on host port
 
 Verified against HA Core 2026.8.3 / Supervisor 2026.07.5 / HAOS 18.2.
 
-When installed through Home Assistant, the add-on appears automatically in the
-sidebar as **Cordyceps Lab**. Its panel is provided through HA ingress and does
-not require exposing the add-on port to the network.
-
 ## Configuration
+
+Set a long random value in the add-on Configuration tab's `token` field before
+starting the service. The container deliberately refuses to start when this
+value is empty, so repeated `no API token set` messages indicate that the
+option was not saved or was cleared. The same value must be used as
+`lds_token` in Home Assistant `secrets.yaml`.
 
 | Option | Required | What it does |
 |---|---|---|
@@ -59,6 +61,30 @@ restart this app. Existing labels keep working.
 Both live in the app's `/data` volume and are included in Home Assistant backups.
 
 ## Endpoints
+
+### Operations and lineage
+
+- `GET /dashboard/summary` returns active batch/jar/culture/harvest counts and
+  the latest activity records.
+- `GET /autoclave/defaults` returns the centralized defaults for jars, liquid
+  culture, and other items.
+- `POST /autoclave` records a cycle. Omitted temperature, pressure, or duration
+  uses the material default; any supplied value is stored as a manual override.
+- `POST /cultures`, `GET /cultures`, and `GET /cultures/{culture_id}/usage`
+  create liquid-culture records and expose their usage history.
+- `POST /lineage` records a source-to-destination relationship without removing
+  or rewriting existing batch/jar records.
+
+Autoclave defaults are configurable in the app Configuration tab with
+`autoclave_default_temperature_c`, `autoclave_default_pressure_psi`, and
+`autoclave_default_duration_min`. Liquid culture keeps the same temperature and
+pressure defaults but uses a shorter 30-minute duration by default.
+
+The standard Home Assistant app configuration cannot query the entity registry
+to render a dynamic entity picker. The existing sensor map therefore remains
+the advanced configuration surface and preserves explicit `none`/`missing`
+semantics; entity selection can be added through a custom HA frontend or an
+entity-registry-aware integration later.
 
 `/health` and `/s/<token>` are unauthenticated — the first so the Supervisor
 watchdog can poll it, the second because the tablet's browser follows it before

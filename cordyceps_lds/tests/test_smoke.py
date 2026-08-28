@@ -106,3 +106,48 @@ def test_contract_smoke(client: TestClient, tmp_path: Path) -> None:
         assert exported.status_code == 200, (table, exported.text)
         assert exported.headers["content-type"].startswith("text/csv")
         assert exported.text.startswith("id,") or table in {"batch_master", "jar_master"}
+
+
+def test_autoclave_defaults_and_lineage(client: TestClient) -> None:
+    defaults = client.get("/autoclave/defaults", headers=auth())
+    assert defaults.status_code == 200
+    assert defaults.json()["jars"] == {"temperature_c": 121.0, "pressure_psi": 15.0, "duration_min": 120.0}
+    assert defaults.json()["liquid_culture"]["duration_min"] == 30.0
+
+    cycle = client.post("/autoclave", headers=auth(), json={
+        "ts": "2026-08-28T10:00:00+05:30", "material_type": "jars", "quantity": 12,
+        "material_name": "R-2026.3 jars", "operator": "Aman", "client_event_id": "auto-default-001",
+    })
+    assert cycle.status_code == 200, cycle.text
+    assert cycle.json()["parameters"] == {"temperature_c": 121.0, "pressure_psi": 15.0, "duration_min": 120.0}
+    assert cycle.json()["parameters_source"] == "default"
+    assert set(cycle.json()["parameter_sources"].values()) == {"default"}
+
+    override = client.post("/autoclave", headers=auth(), json={
+        "ts": "2026-08-28T11:00:00+05:30", "material_type": "liquid_culture", "quantity": 3,
+        "temperature_c": 118, "pressure_psi": 12, "duration_min": 45, "operator": "Aman",
+    })
+    assert override.status_code == 200, override.text
+    assert override.json()["parameters_source"] == "manual"
+    assert override.json()["parameters"]["duration_min"] == 45.0
+    assert set(override.json()["parameter_sources"].values()) == {"manual"}
+
+    culture = client.post("/cultures", headers=auth(), json={
+        "culture_id": "LC-001", "created_ts": "2026-08-28T12:00:00+05:30", "volume_ml": 500,
+        "operator": "Aman", "client_event_id": "culture-001",
+    })
+    assert culture.status_code == 200, culture.text
+    linked = client.post("/lineage", headers=auth(), json={
+        "ts": "2026-08-28T13:00:00+05:30", "source_type": "culture", "source_id": "LC-001",
+        "destination_type": "batch", "destination_id": "AC-20260828-01", "relationship": "inoculated_jars",
+        "quantity": 12, "unit": "jars", "operator": "Aman", "client_event_id": "lineage-001",
+    })
+    assert linked.status_code == 200, linked.text
+    usage = client.get("/cultures/LC-001/usage", headers=auth())
+    assert usage.status_code == 200
+    assert usage.json()["usage"][0]["destination_id"] == "AC-20260828-01"
+
+    summary = client.get("/dashboard/summary", headers=auth())
+    assert summary.status_code == 200
+    assert summary.json()["active_cultures"] == 1
+    assert {row["event_type"] for row in summary.json()["recent_activity"]} >= {"autoclaved", "culture_created", "lineage_linked"}

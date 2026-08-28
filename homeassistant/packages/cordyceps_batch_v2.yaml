@@ -320,6 +320,11 @@ input_select:
     icon: mdi:currency-inr
     options: [ingredient, consumable, electricity, labor, waste, sale]
     initial: ingredient
+  cm2_autoclave_material:
+    name: "CM2 autoclave material"
+    icon: mdi:autoclave
+    options: [jars, liquid_culture, other]
+    initial: jars
 
 input_number:
   cm2_colonization_pct:
@@ -422,6 +427,40 @@ input_number:
     mode: box
     unit_of_measurement: "INR"
     icon: mdi:currency-inr
+  cm2_autoclave_quantity:
+    name: "CM2 autoclave quantity"
+    min: 1
+    max: 999
+    step: 1
+    mode: box
+    icon: mdi:counter
+  cm2_autoclave_temperature_c:
+    name: "CM2 autoclave temperature"
+    min: 1
+    max: 200
+    step: 0.5
+    mode: box
+    unit_of_measurement: "°C"
+    initial: 121
+    icon: mdi:thermometer
+  cm2_autoclave_pressure_psi:
+    name: "CM2 autoclave pressure"
+    min: 1
+    max: 50
+    step: 0.5
+    mode: box
+    unit_of_measurement: "psi"
+    initial: 15
+    icon: mdi:gauge
+  cm2_autoclave_duration_min:
+    name: "CM2 autoclave duration"
+    min: 1
+    max: 600
+    step: 1
+    mode: box
+    unit_of_measurement: "min"
+    initial: 120
+    icon: mdi:timer-outline
   cm2_review_window_days:
     name: "CM2 dark-stage review window"
     min: 5
@@ -518,6 +557,15 @@ rest_command:
       Accept: application/json
     payload: "{{ payload }}"
     verify_ssl: false
+  cm2_post_autoclave:
+    url: "{{ lds_base_url }}/autoclave"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ lds_token }}"
+      Content-Type: application/json
+      Accept: application/json
+    payload: "{{ payload }}"
+    verify_ssl: false
   cm2_summarize:
     url: "{{ lds_base_url }}/env/summarize"
     method: POST
@@ -567,6 +615,28 @@ rest:
           - items
 
   - resource_template: >-
+      {{ state_attr('sensor.cm2_lds_connection', 'base_url') ~ '/dashboard/summary' }}
+    method: GET
+    headers:
+      Authorization: >-
+        Bearer {{ state_attr('sensor.cm2_lds_connection', 'bearer_token') }}
+      Accept: application/json
+    verify_ssl: false
+    scan_interval: 60
+    sensor:
+      - name: "CM2 dashboard summary"
+        unique_id: cm2_dashboard_summary
+        value_template: >-
+          {{ value_json.get('active_batches', 0) if value_json is mapping else 'unknown' }}
+        json_attributes:
+          - active_batches
+          - planned_jars
+          - total_jars
+          - active_cultures
+          - harvest_ready
+          - recent_activity
+
+  - resource_template: >-
       {% set selected = states('input_text.cm2_selected_id') | trim %}
       {% set batch = selected.split('-J')[0] if '-J' in selected else selected %}
       {{ state_attr('sensor.cm2_lds_connection', 'base_url') ~ '/batches/' ~ batch ~ '/timeline' }}
@@ -593,6 +663,47 @@ rest:
           - batch
 
 script:
+  cm2_log_autoclave:
+    alias: "CM2 · Log autoclave cycle"
+    icon: mdi:autoclave
+    mode: single
+    sequence:
+      - variables:
+          event_id: "{{ now().timestamp() }}-{{ range(100000,999999) | random }}"
+      - action: rest_command.cm2_post_autoclave
+        data:
+          lds_base_url: !secret lds_base_url
+          lds_token: !secret lds_token
+          payload: >-
+            {{ {
+              'ts': now().isoformat(),
+              'material_type': states('input_select.cm2_autoclave_material'),
+              'quantity': states('input_number.cm2_autoclave_quantity') | float,
+              'temperature_c': states('input_number.cm2_autoclave_temperature_c') | float,
+              'pressure_psi': states('input_number.cm2_autoclave_pressure_psi') | float,
+              'duration_min': states('input_number.cm2_autoclave_duration_min') | float,
+              'operator': states('input_select.cm2_operator'),
+              'notes': states('input_text.cm2_notes'),
+              'data_source': 'manual',
+              'client_event_id': event_id
+            } | tojson }}
+        response_variable: autoclave_response
+      - choose:
+          - conditions: "{{ autoclave_response.status | default(0) | int in [200, 201] }}"
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Autoclave cycle logged"
+                  message: "{{ states('input_number.cm2_autoclave_quantity') }} {{ states('input_select.cm2_autoclave_material') }} recorded."
+                  notification_id: cm2_autoclave_logged
+          - conditions: []
+            sequence:
+              - action: persistent_notification.create
+                data:
+                  title: "Autoclave cycle not logged"
+                  message: "LDS returned HTTP {{ autoclave_response.status | default('no response', true) }}."
+                  notification_id: cm2_autoclave_error
+
   cm2_reset_form:
     alias: "CM2 · Clear scan action form"
     icon: mdi:eraser

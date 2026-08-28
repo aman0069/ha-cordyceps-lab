@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import csv
-import html
 import io
 import json
 import math
@@ -13,10 +12,9 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
-from urllib.parse import parse_qs, urlencode
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import Depends, FastAPI, HTTPException, Query, Response, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,6 +23,13 @@ from .ids import allocate_batch_id, is_valid_batch_id, is_valid_jar_id, mint_jar
 from .nullsafe import coerce, vpd_kpa
 from .stages import IllegalTransition, STAGES, allowed_actions, transition
 
+APP_VERSION = "2.6.0"
+AUTOCLAVE_DEFAULTS = {
+    "jars": (float(os.getenv("AUTOCLAVE_DEFAULT_TEMPERATURE_C", "121")), float(os.getenv("AUTOCLAVE_DEFAULT_PRESSURE_PSI", "15")), float(os.getenv("AUTOCLAVE_DEFAULT_DURATION_MIN", "120"))),
+    "liquid_culture": (float(os.getenv("AUTOCLAVE_DEFAULT_TEMPERATURE_C", "121")), float(os.getenv("AUTOCLAVE_DEFAULT_PRESSURE_PSI", "15")), 30.0),
+    "other": (float(os.getenv("AUTOCLAVE_DEFAULT_TEMPERATURE_C", "121")), float(os.getenv("AUTOCLAVE_DEFAULT_PRESSURE_PSI", "15")), float(os.getenv("AUTOCLAVE_DEFAULT_DURATION_MIN", "120"))),
+}
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     """Initialize persistent storage when the service starts."""
@@ -32,7 +37,7 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="Cordyceps Lab Data Service", version="2.5.1", lifespan=lifespan)
+app = FastAPI(title="Cordyceps Lab Data Service", version=APP_VERSION, lifespan=lifespan)
 security = HTTPBearer(auto_error=False)
 SOURCE_VALUES = {"manual", "qr_scan", "sensor", "import", "system"}
 EXPORT_TABLES = {
@@ -58,133 +63,6 @@ def require_auth(credentials: HTTPAuthorizationCredentials | None = Depends(secu
     expected = os.getenv("LDS_TOKEN", "")
     if not expected or credentials is None or credentials.scheme.lower() != "bearer" or credentials.credentials != expected:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid bearer token")
-
-
-def ui_value(values: dict[str, list[str]], key: str) -> str | None:
-    value = values.get(key, [""])[0].strip()
-    return value or None
-
-
-def ui_float(values: dict[str, list[str]], key: str) -> float | None:
-    value = ui_value(values, key)
-    return float(value) if value is not None else None
-
-
-def ui_int(values: dict[str, list[str]], key: str) -> int | None:
-    value = ui_value(values, key)
-    return int(value) if value is not None else None
-
-
-@app.post("/ui/{action}")
-async def ui_action(action: str, request: Request) -> RedirectResponse:
-    """Handle ingress forms with the existing server-side contract handlers."""
-    values = parse_qs((await request.body()).decode("utf-8"), keep_blank_values=True)
-    try:
-        if action == "batch":
-            create_batch(BatchCreate(
-                created_ts=ui_value(values, "created_ts"), strain=ui_value(values, "strain") or "",
-                recipe_version=ui_value(values, "recipe_version") or "", jar_count_planned=ui_int(values, "jar_count_planned"),
-                operator=ui_value(values, "operator"), data_source="manual",
-            ))
-            message = "Batch and autoclave record saved."
-        elif action == "stage":
-            create_event(EventCreate(
-                ts=ui_value(values, "ts"), batch_id=ui_value(values, "batch_id") or "", jar_id=ui_value(values, "jar_id"),
-                to_stage=ui_value(values, "to_stage") or "", operator=ui_value(values, "operator"),
-                dest_location=ui_value(values, "location"), notes=ui_value(values, "notes"),
-                force="force" in values, data_source="manual",
-            ))
-            message = "Stage update recorded."
-        elif action == "transfer":
-            env = {key: ui_float(values, key) for key in ("temp_c", "rh_pct", "co2_ppm", "lux")}
-            env["light_state"] = ui_value(values, "light_state")
-            transfer_event(TransferCreate(
-                batch_id=ui_value(values, "batch_id"), jar_ids=[ui_value(values, "jar_id")] if ui_value(values, "jar_id") else None,
-                ts=ui_value(values, "ts") or now_iso(), operator=ui_value(values, "operator") or "",
-                source_location=ui_value(values, "source_location") or "", dest_chamber=ui_value(values, "dest_chamber") or "",
-                rack_shelf=ui_value(values, "rack_shelf") or "", reason=ui_value(values, "reason") or "",
-                colonization_pct=ui_float(values, "colonization_pct") or 0, moisture_level=ui_value(values, "moisture_level") or "",
-                env={key: value for key, value in env.items() if value is not None}, notes=ui_value(values, "notes"), data_source="manual",
-                force="force" in values,
-            ))
-            message = "Transfer and environment snapshot recorded."
-        elif action in {"observation", "harvest"}:
-            common: dict[str, Any] = {
-                "ts": ui_value(values, "ts") or now_iso(), "batch_id": ui_value(values, "batch_id") or "",
-                "jar_id": ui_value(values, "jar_id"), "operator": ui_value(values, "operator"), "notes": ui_value(values, "notes"),
-                "data_source": "manual",
-            }
-            if action == "observation":
-                common.update({key: ui_value(values, key) for key in ("stage", "mycelial_density", "mycelial_color", "condensation_level", "substrate_dryness", "contamination_status", "contamination_type")})
-                common.update({key: ui_float(values, key) for key in ("colonization_pct", "avg_height_mm")})
-                common.update({key: ui_int(values, key) for key in ("primordia_count", "fruiting_body_count", "morphology_score")})
-                create_observation(TableRecord(**common))
-                message = "Observation recorded."
-            else:
-                common.update({key: ui_float(values, key) for key in ("fresh_weight_g", "dry_weight_g", "substrate_dry_g", "biological_efficiency_pct", "drying_temp_c", "drying_hours")})
-                common.update({key: ui_int(values, key) for key in ("usable_jars", "rejected_jars", "contaminated_jars")})
-                common.update({key: ui_value(values, key) for key in ("grade", "drying_method", "packaging_date", "package_type")})
-                create_harvest(TableRecord(**common))
-                message = "Harvest record saved."
-        elif action == "lookup":
-            lookup = ui_value(values, "lookup") or ""
-            with get_db() as connection:
-                found = one(connection, "SELECT * FROM batch_master WHERE batch_id=?", (lookup,))
-                if not found:
-                    found = one(connection, "SELECT j.*, b.strain FROM jar_master j JOIN batch_master b ON b.batch_id=j.batch_id WHERE j.jar_id=?", (lookup,))
-            if not found:
-                raise HTTPException(404, detail="batch or jar not found")
-            message = f"Found {found['batch_id']}: {found.get('current_stage', 'record')}"
-        else:
-            raise HTTPException(404, detail="unknown workbench action")
-        query = urlencode({"notice": message})
-    except (HTTPException, ValueError) as exc:
-        detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
-        query = urlencode({"error": str(detail)})
-    return RedirectResponse(url=f"../?{query}", status_code=303)
-
-
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request) -> HTMLResponse:
-    with get_db() as connection:
-        batch_count = connection.execute("SELECT COUNT(*) FROM batch_master").fetchone()[0]
-        jar_count = connection.execute("SELECT COUNT(*) FROM jar_master").fetchone()[0]
-        event_count = connection.execute("SELECT COUNT(*) FROM stage_events").fetchone()[0]
-        observation_count = connection.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
-        batches = rows(connection, "SELECT batch_id, strain, current_stage FROM batch_master ORDER BY created_ts DESC LIMIT 30")
-        recent = connection.execute(
-            "SELECT batch_id, jar_id, to_stage, ts, operator FROM stage_events ORDER BY ts DESC, id DESC LIMIT 8"
-        ).fetchall()
-    recent_rows = "".join(
-        f"<tr><td>{html.escape(str(row['batch_id']))}</td>"
-        f"<td>{html.escape(str(row['jar_id'] or '-'))}</td>"
-        f"<td>{html.escape(str(row['to_stage'] or '-'))}</td>"
-        f"<td>{html.escape(str(row['ts']))}</td>"
-        f"<td>{html.escape(str(row['operator'] or '-'))}</td></tr>"
-        for row in recent
-    ) or '<tr><td colspan="5" class="muted">No events recorded yet.</td></tr>'
-    batch_options = "".join(
-        f'<option value="{html.escape(batch["batch_id"], quote=True)}">{html.escape(batch["batch_id"])} · {html.escape(batch["strain"])} · {html.escape(batch["current_stage"])}</option>'
-        for batch in batches
-    ) or '<option value="">No batches yet</option>'
-    params = request.query_params
-    notice = html.escape(params.get("notice", ""))
-    error = html.escape(params.get("error", ""))
-    feedback = f'<div class="flash success" role="status">{notice}</div>' if notice else ""
-    feedback += f'<div class="flash error" role="alert">{error}</div>' if error else ""
-    page = """<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Cordyceps Lab Workbench</title><style>
-:root{--paper:#f4efe4;--paper-deep:#e7dece;--ink:#20251e;--muted:#687064;--fern:#315c43;--fern-dark:#214331;--saffron:#c87822;--red:#a64532;--line:#cfc5b3;--white:#fffdf8;--shadow:0 8px 24px #51402a16}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 "Trebuchet MS",Verdana,sans-serif;background-image:radial-gradient(#315c4310 .7px,transparent .7px);background-size:13px 13px}header{position:sticky;top:0;z-index:2;background:var(--paper);border-bottom:1px solid var(--line);padding:14px max(20px,calc((100% - 1200px)/2));display:flex;align-items:center;justify-content:space-between;gap:18px}.brand{display:flex;align-items:center;gap:12px}.mark{width:34px;height:34px;background:var(--fern);color:var(--paper);display:grid;place-items:center;border-radius:8px;font:700 20px Georgia,serif}.kicker{text-transform:uppercase;letter-spacing:.13em;font-size:11px;color:var(--fern);font-weight:700}h1,h2,h3{font-family:Georgia,"Times New Roman",serif;letter-spacing:0}h1{font-size:clamp(24px,4vw,38px);line-height:1;margin:0}h2{font-size:23px;margin:0 0 4px}h3{font-size:18px;margin:0}.wrap{max-width:1200px;margin:0 auto;padding:30px 20px 56px}.intro{display:flex;justify-content:space-between;align-items:end;gap:30px;margin-bottom:24px}.intro p{max-width:500px;color:var(--muted);margin:8px 0 0}.quick{display:flex;gap:8px;flex-wrap:wrap}.quick a{color:var(--fern);font-weight:700;border-bottom:2px solid var(--saffron);text-decoration:none;padding:4px 0}.stats{display:grid;grid-template-columns:repeat(4,1fr);border-block:1px solid var(--line);margin-bottom:28px}.stat{padding:15px 17px;border-right:1px solid var(--line)}.stat:last-child{border:0}.stat b{display:block;font:700 30px Georgia,serif;color:var(--fern)}.stat span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}.forms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.panel{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:20px;box-shadow:var(--shadow);animation:rise .45s both}.panel:nth-child(2){animation-delay:.06s}.panel:nth-child(3){animation-delay:.12s}.panel:nth-child(4){animation-delay:.18s}.panel.wide{grid-column:1/-1}.panel-head{display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:16px}.index{color:var(--saffron);font:700 20px Georgia,serif}.hint{color:var(--muted);font-size:12px;margin:2px 0 0}.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 13px}.field{display:flex;flex-direction:column;gap:4px}.field.full{grid-column:1/-1}label{font-size:12px;font-weight:700;color:var(--muted)}input,select,textarea{width:100%;border:1px solid #bdb4a4;background:#fffefb;color:var(--ink);border-radius:5px;padding:10px;font:inherit}textarea{min-height:64px;resize:vertical}input:focus,select:focus,textarea:focus{outline:3px solid #c8782250;border-color:var(--saffron)}.actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:16px}.button{border:0;border-radius:5px;background:var(--fern);color:white;padding:11px 16px;font:700 14px inherit;cursor:pointer}.button:hover{background:var(--fern-dark)}.button:disabled{opacity:.55;cursor:wait}.check{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}.check input{width:auto}.flash{padding:12px 15px;border-radius:5px;margin-bottom:18px;font-weight:700}.success{background:#dceadd;color:var(--fern-dark);border-left:4px solid var(--fern)}.error{background:#f5dcd4;color:#7e3026;border-left:4px solid var(--red)}.recent{margin-top:30px}.table-wrap{overflow:auto;background:var(--white);border:1px solid var(--line);border-radius:8px}.recent table{width:100%;border-collapse:collapse;min-width:650px}.recent th,.recent td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);font-size:13px}.recent th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em}.recent tr:last-child td{border:0}.muted{text-align:center;color:var(--muted);padding:22px!important}@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@media(max-width:760px){.intro{display:block}.quick{margin-top:14px}.stats{grid-template-columns:repeat(2,1fr)}.stat:nth-child(2){border-right:0}.stat:nth-child(-n+2){border-bottom:1px solid var(--line)}.forms{grid-template-columns:1fr}.panel.wide{grid-column:auto}}@media(max-width:480px){.wrap{padding-inline:14px}header{padding-inline:14px}.fields{grid-template-columns:1fr}.field.full{grid-column:auto}.actions{align-items:stretch;flex-direction:column}.button{width:100%}}
-</style></head><body><header><div class="brand"><div class="mark">C</div><div><div class="kicker">Controlled cultivation</div><h1>Daily workbench</h1></div></div><nav class="quick"><a href="./docs">API docs</a><a href="/lovelace/lab-scan">Scan dashboard</a></nav></header><main class="wrap">__FEEDBACK__<section class="intro"><div><div class="kicker">Field notebook / 26 Aug 2026</div><p>Record the next physical action while the batch is in your hands. Every entry becomes part of the traceable lab history.</p></div></section><section class="stats"><div class="stat"><b>__BATCHES__</b><span>Batches</span></div><div class="stat"><b>__JARS__</b><span>Jars in ledger</span></div><div class="stat"><b>__EVENTS__</b><span>Stage events</span></div><div class="stat"><b>__OBSERVATIONS__</b><span>Observations</span></div></section><section class="forms">
-<form class="panel" action="./ui/batch" method="post"><div class="panel-head"><div><div class="kicker">01 / intake</div><h2>New batch / autoclave</h2><p class="hint">Creates the batch, planned jars, and autoclave event.</p></div><span class="index">01</span></div><div class="fields"><div class="field"><label for="created_ts">Date and time</label><input id="created_ts" name="created_ts" type="datetime-local" required></div><div class="field"><label for="strain">Strain</label><input id="strain" name="strain" placeholder="CM-Delhi" required></div><div class="field"><label for="recipe_version">Recipe version</label><input id="recipe_version" name="recipe_version" placeholder="R-2026.3" required></div><div class="field"><label for="jar_count_planned">Planned jar count</label><input id="jar_count_planned" name="jar_count_planned" type="number" min="0" max="999" required></div><div class="field full"><label for="batch_operator">Operator</label><input id="batch_operator" name="operator" required></div></div><div class="actions"><span class="hint">Stage starts at autoclaved.</span><button class="button" type="submit">Save batch</button></div></form>
-<form class="panel" action="./ui/stage" method="post"><div class="panel-head"><div><div class="kicker">02 / movement</div><h2>Stage update</h2><p class="hint">Use a batch ID or a specific jar ID.</p></div><span class="index">02</span></div><div class="fields"><div class="field"><label for="stage_batch">Batch ID</label><input id="stage_batch" name="batch_id" list="batch-list" required></div><div class="field"><label for="stage_jar">Jar ID <span class="hint">optional</span></label><input id="stage_jar" name="jar_id" placeholder="...-J001"></div><div class="field"><label for="to_stage">Target stage</label><select id="to_stage" name="to_stage" required><option value="">Choose stage</option>__STAGE_OPTIONS__</select></div><div class="field"><label for="location">Location</label><input id="location" name="location" placeholder="dark_room"></div><div class="field"><label for="stage_operator">Operator</label><input id="stage_operator" name="operator" required></div><div class="field full"><label for="stage_notes">Notes</label><textarea id="stage_notes" name="notes"></textarea></div></div><div class="actions"><label class="check"><input name="force" type="checkbox"> Force transition (audited)</label><button class="button" type="submit">Record stage</button></div></form>
-<form class="panel" action="./ui/transfer" method="post"><div class="panel-head"><div><div class="kicker">03 / environment</div><h2>Transfer to light</h2><p class="hint">Moves one batch or jar and captures the environment snapshot.</p></div><span class="index">03</span></div><div class="fields"><div class="field"><label for="transfer_batch">Batch ID</label><input id="transfer_batch" name="batch_id" list="batch-list"></div><div class="field"><label for="transfer_jar">Jar ID <span class="hint">optional</span></label><input id="transfer_jar" name="jar_id"></div><div class="field"><label for="transfer_ts">Timestamp</label><input id="transfer_ts" name="ts" type="datetime-local" required></div><div class="field"><label for="transfer_operator">Operator</label><input id="transfer_operator" name="operator" required></div><div class="field"><label for="source_location">Source</label><input id="source_location" name="source_location" placeholder="dark_room" required></div><div class="field"><label for="dest_chamber">Destination</label><input id="dest_chamber" name="dest_chamber" placeholder="light_room" required></div><div class="field"><label for="rack_shelf">Rack / shelf</label><input id="rack_shelf" name="rack_shelf" placeholder="F1-R2-S3" required></div><div class="field"><label for="reason">Reason</label><input id="reason" name="reason" value="scheduled transfer" required></div><div class="field"><label for="colonization_pct">Colonization %</label><input id="colonization_pct" name="colonization_pct" type="number" min="0" max="100" step="0.1" required></div><div class="field"><label for="moisture_level">Moisture</label><input id="moisture_level" name="moisture_level" placeholder="ideal" required></div><div class="field"><label for="temp_c">Temperature C</label><input id="temp_c" name="temp_c" type="number" step="0.1"></div><div class="field"><label for="rh_pct">RH %</label><input id="rh_pct" name="rh_pct" type="number" step="0.1"></div><div class="field"><label for="co2_ppm">CO2 ppm</label><input id="co2_ppm" name="co2_ppm" type="number"></div><div class="field"><label for="lux">Lux</label><input id="lux" name="lux" type="number"></div></div><div class="actions"><label class="check"><input name="force" type="checkbox"> Force transition (audited)</label><button class="button" type="submit">Transfer to light</button></div></form>
-<form class="panel" action="./ui/observation" method="post"><div class="panel-head"><div><div class="kicker">04 / inspection</div><h2>Observation / harvest</h2><p class="hint">Log inspection details now; harvest fields are available below.</p></div><span class="index">04</span></div><div class="fields"><div class="field"><label for="obs_batch">Batch ID</label><input id="obs_batch" name="batch_id" list="batch-list" required></div><div class="field"><label for="obs_jar">Jar ID</label><input id="obs_jar" name="jar_id"></div><div class="field"><label for="obs_stage">Stage</label><select id="obs_stage" name="stage"><option value="">Select stage</option>__STAGE_OPTIONS__</select></div><div class="field"><label for="obs_operator">Operator</label><input id="obs_operator" name="operator" required></div><div class="field"><label for="colonization_obs">Colonization %</label><input id="colonization_obs" name="colonization_pct" type="number" min="0" max="100" step="0.1"></div><div class="field"><label for="density">Mycelial density</label><input id="density" name="mycelial_density" placeholder="even / patchy"></div><div class="field"><label for="contamination">Contamination</label><select id="contamination" name="contamination_status"><option value="">Select status</option><option>clear</option><option>suspect</option><option>confirmed</option></select></div><div class="field"><label for="primordia">Primordia count</label><input id="primordia" name="primordia_count" type="number" min="0"></div><div class="field full"><label for="obs_notes">Notes</label><textarea id="obs_notes" name="notes" placeholder="Color, condensation, morphology, or contamination detail"></textarea></div></div><div class="actions"><span class="hint">Raw fields are stored only when supported by the schema.</span><button class="button" type="submit">Save observation</button></div></form>
-<form class="panel wide" action="./ui/harvest" method="post"><div class="panel-head"><div><div class="kicker">05 / close-out</div><h2>Harvest record</h2><p class="hint">Weights and packaging details feed the yield ledger. Biological efficiency is derived when substrate dry weight is supplied.</p></div><span class="index">05</span></div><div class="fields"><div class="field"><label for="harvest_batch">Batch ID</label><input id="harvest_batch" name="batch_id" list="batch-list" required></div><div class="field"><label for="harvest_jar">Jar ID</label><input id="harvest_jar" name="jar_id"></div><div class="field"><label for="harvest_ts">Timestamp</label><input id="harvest_ts" name="ts" type="datetime-local" required></div><div class="field"><label for="harvest_operator">Operator</label><input id="harvest_operator" name="operator" required></div><div class="field"><label for="fresh_weight_g">Fresh weight (g)</label><input id="fresh_weight_g" name="fresh_weight_g" type="number" step="0.1"></div><div class="field"><label for="dry_weight_g">Dry weight (g)</label><input id="dry_weight_g" name="dry_weight_g" type="number" step="0.1"></div><div class="field"><label for="substrate_dry_g">Substrate dry (g)</label><input id="substrate_dry_g" name="substrate_dry_g" type="number" step="0.1"></div><div class="field"><label for="grade">Grade</label><input id="grade" name="grade" placeholder="A"></div><div class="field"><label for="drying_method">Drying method</label><input id="drying_method" name="drying_method"></div><div class="field"><label for="package_type">Package type</label><input id="package_type" name="package_type"></div><div class="field full"><label for="harvest_notes">Notes</label><textarea id="harvest_notes" name="notes"></textarea></div></div><div class="actions"><span class="hint">Use the same form for batch or jar-level harvest.</span><button class="button" type="submit">Save harvest</button></div></form></section>
-<form class="panel wide" action="./ui/lookup" method="post"><div class="panel-head"><div><div class="kicker">06 / lookup</div><h2>Find a record</h2><p class="hint">Search a batch or jar ID in the ledger.</p></div><span class="index">06</span></div><div class="actions"><input name="lookup" list="batch-list" placeholder="AC-20260821-01 or ...-J001" required><button class="button" type="submit">Look up</button></div></form><datalist id="batch-list">__BATCH_OPTIONS__</datalist><section class="recent"><div class="kicker">Ledger / latest movement</div><h2>Recent events</h2><div class="table-wrap"><table><thead><tr><th>Batch</th><th>Jar</th><th>Stage</th><th>Time</th><th>Operator</th></tr></thead><tbody>__RECENT_ROWS__</tbody></table></div></section></main><script>document.querySelectorAll("form").forEach(function(form){form.addEventListener("submit",function(){var button=form.querySelector("button[type=submit]");if(button){button.disabled=true;button.textContent="Saving...";}});});</script></body></html>"""
-    stage_options = "".join(f'<option value="{html.escape(stage, quote=True)}">{html.escape(stage.replace("_", " "))}</option>' for stage in sorted(STAGES))
-    return HTMLResponse(page.replace("__FEEDBACK__", feedback).replace("__BATCHES__", str(batch_count)).replace("__JARS__", str(jar_count)).replace("__EVENTS__", str(event_count)).replace("__OBSERVATIONS__", str(observation_count)).replace("__STAGE_OPTIONS__", stage_options).replace("__BATCH_OPTIONS__", batch_options).replace("__RECENT_ROWS__", recent_rows))
 
 
 def rows(connection: sqlite3.Connection, sql: str, parameters: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
@@ -292,6 +170,12 @@ def apply_stage_event(connection: sqlite3.Connection, payload: dict[str, Any], *
         "forced": checked.forced,
     }
     event_id = insert_row(connection, "stage_events", event)
+    record_activity(connection, payload.get("action") or "stage_changed", {
+        "ts": event["ts"], "source_type": "jar" if jar_id else "batch",
+        "source_id": jar_id or batch_id, "destination_type": "stage",
+        "destination_id": checked.to_stage, "operator": event["operator"],
+        "notes": event["notes"], "data_source": event["data_source"],
+    }, parameters={"from_stage": checked.from_stage, "forced": checked.forced})
     destination = payload.get("dest_location")
     if jar_id:
         connection.execute("UPDATE jar_master SET current_stage=?, current_location=COALESCE(?, current_location), rack_shelf=COALESCE(?, rack_shelf) WHERE jar_id=?", (to_stage, destination, payload.get("rack_shelf"), jar_id))
@@ -407,12 +291,53 @@ class LabelsRequest(ContractModel):
     jar_ids: list[str] | None = None
 
 
+class AutoclaveCreate(ContractModel):
+    ts: str
+    material_type: Literal["jars", "liquid_culture", "other"]
+    quantity: float = Field(gt=0)
+    material_name: str | None = None
+    batch_id: str | None = None
+    culture_id: str | None = None
+    temperature_c: float | None = Field(default=None, gt=0)
+    pressure_psi: float | None = Field(default=None, gt=0)
+    duration_min: float | None = Field(default=None, gt=0)
+    notes: str | None = None
+    operator: str | None = None
+    data_source: str | None = None
+
+
+class CultureCreate(ContractModel):
+    culture_id: str
+    culture_type: Literal["liquid_culture", "master", "working"] = "liquid_culture"
+    created_ts: str
+    parent_culture_id: str | None = None
+    status: str = "active"
+    volume_ml: float | None = Field(default=None, gt=0)
+    notes: str | None = None
+    operator: str | None = None
+    data_source: str | None = None
+
+
+class LineageCreate(ContractModel):
+    ts: str
+    source_type: str
+    source_id: str
+    destination_type: str
+    destination_id: str
+    relationship: str
+    quantity: float | None = Field(default=None, gt=0)
+    unit: str | None = None
+    notes: str | None = None
+    operator: str | None = None
+    data_source: str | None = None
+
+
 # /health is intentionally UNauthenticated: the add-on watchdog, docker HEALTHCHECK
 # and HA's rest sensor must be able to poll liveness without holding the token.
 # It exposes no lab data.
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "version": "2.5.1"}
+    return {"status": "ok", "version": APP_VERSION}
 
 
 # ---------------------------------------------------------------------------
@@ -497,6 +422,19 @@ def get_batch(batch_id: str) -> dict[str, Any]:
         if not batch: raise HTTPException(404, detail="batch not found")
         batch["jars"] = rows(connection, "SELECT * FROM jar_master WHERE batch_id=? ORDER BY jar_index", (batch_id,))
         return batch
+
+
+@app.get("/dashboard/summary", dependencies=[Depends(require_auth)])
+def dashboard_summary() -> dict[str, Any]:
+    with get_db() as connection:
+        active_stages = tuple({"autoclaved", "inoculated", "dark_incubation", "transferred_to_light", "primordia_observed", "fruiting"})
+        placeholders = ",".join("?" for _ in active_stages)
+        counts = one(connection, f"SELECT COUNT(*) AS active_batches, COALESCE(SUM(jar_count_planned), 0) AS planned_jars FROM batch_master WHERE current_stage IN ({placeholders})", active_stages) or {}
+        jars = one(connection, "SELECT COUNT(*) AS total_jars FROM jar_master WHERE status IS NULL OR status NOT IN ('discarded', 'packaged')") or {}
+        cultures = one(connection, "SELECT COUNT(*) AS active_cultures FROM culture_master WHERE status='active'") or {}
+        harvest_ready = one(connection, "SELECT COUNT(*) AS harvest_ready FROM batch_master WHERE current_stage IN ('fruiting', 'harvested')") or {}
+        recent = rows(connection, "SELECT * FROM activity_events ORDER BY ts DESC, id DESC LIMIT 12")
+        return {**counts, **jars, **cultures, **harvest_ready, "recent_activity": recent}
 
 
 @app.patch("/batches/{batch_id}", dependencies=[Depends(require_auth)])
@@ -606,9 +544,130 @@ def create_table_record(table: str, body: TableRecord, endpoint: str, derive: ca
         connection.execute("BEGIN IMMEDIATE")
         try:
             record_id = insert_row(connection, table, values)
+            if table == "harvest_yield" and values.get("jar_id"):
+                insert_row(connection, "lineage_edges", {
+                    "ts": values.get("ts") or now_iso(), "source_type": "jar",
+                    "source_id": values["jar_id"], "destination_type": "harvest",
+                    "destination_id": str(record_id), "relationship": "harvested",
+                    "quantity": values.get("dry_weight_g"), "unit": "g",
+                    "notes": values.get("notes"), "operator": values.get("operator"),
+                    "data_source": values.get("data_source") or "manual",
+                })
             response = {"id": record_id}
             remember_response(connection, body.client_event_id, endpoint, response)
             connection.commit(); return response
+        except Exception:
+            connection.rollback(); raise
+
+
+def record_activity(connection: sqlite3.Connection, event_type: str, values: dict[str, Any], *, parameters: dict[str, Any] | None = None) -> int:
+    return insert_row(connection, "activity_events", {
+        "ts": values.get("ts") or now_iso(), "event_type": event_type,
+        "source_type": values.get("source_type"), "source_id": values.get("source_id"),
+        "destination_type": values.get("destination_type"), "destination_id": values.get("destination_id"),
+        "quantity": values.get("quantity"), "unit": values.get("unit"),
+        "parameters_json": json.dumps(parameters, default=str) if parameters else None,
+        "notes": values.get("notes"), "operator": values.get("operator"),
+        "data_source": values.get("data_source") or "manual",
+    })
+
+
+@app.get("/autoclave/defaults", dependencies=[Depends(require_auth)])
+def autoclave_defaults() -> dict[str, Any]:
+    return {material: {"temperature_c": values[0], "pressure_psi": values[1], "duration_min": values[2]} for material, values in AUTOCLAVE_DEFAULTS.items()}
+
+
+@app.post("/autoclave", dependencies=[Depends(require_auth)])
+def create_autoclave(body: AutoclaveCreate) -> dict[str, Any]:
+    values = model_data(body)
+    ensure_source(values.get("data_source"))
+    defaults = AUTOCLAVE_DEFAULTS[body.material_type]
+    parameters = {
+        "temperature_c": body.temperature_c if body.temperature_c is not None else defaults[0],
+        "pressure_psi": body.pressure_psi if body.pressure_psi is not None else defaults[1],
+        "duration_min": body.duration_min if body.duration_min is not None else defaults[2],
+    }
+    parameter_sources = {
+        "temperature_c": "manual" if body.temperature_c is not None else "default",
+        "pressure_psi": "manual" if body.pressure_psi is not None else "default",
+        "duration_min": "manual" if body.duration_min is not None else "default",
+    }
+    source = "manual" if "manual" in parameter_sources.values() else "default"
+    with get_db() as connection:
+        duplicate = dedupe_response(connection, body.client_event_id)
+        if duplicate is not None:
+            return duplicate
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            cycle = {**values, **parameters, "parameters_source": source, "parameter_sources_json": json.dumps(parameter_sources)}
+            cycle.pop("client_event_id", None)
+            cycle_id = insert_row(connection, "autoclave_cycles", cycle)
+            activity_id = record_activity(connection, "autoclaved", {**values, "source_type": body.material_type, "source_id": body.material_name}, parameters=parameters)
+            response = {"id": cycle_id, "activity_id": activity_id, "parameters": parameters, "parameters_source": source, "parameter_sources": parameter_sources}
+            remember_response(connection, body.client_event_id, "/autoclave", response)
+            connection.commit()
+            return response
+        except Exception:
+            connection.rollback(); raise
+
+
+@app.post("/cultures", dependencies=[Depends(require_auth)])
+def create_culture(body: CultureCreate) -> dict[str, Any]:
+    values = model_data(body)
+    ensure_source(values.get("data_source"))
+    values.pop("client_event_id", None)
+    with get_db() as connection:
+        duplicate = dedupe_response(connection, body.client_event_id)
+        if duplicate is not None:
+            return duplicate
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            insert_row(connection, "culture_master", values)
+            activity_id = record_activity(connection, "culture_created", {**values, "source_type": "culture", "source_id": body.culture_id})
+            response = {"culture_id": body.culture_id, "activity_id": activity_id}
+            remember_response(connection, body.client_event_id, "/cultures", response)
+            connection.commit()
+            return response
+        except Exception:
+            connection.rollback(); raise
+
+
+@app.get("/cultures", dependencies=[Depends(require_auth)])
+def list_cultures(status_filter: str | None = Query(default=None, alias="status")) -> dict[str, Any]:
+    with get_db() as connection:
+        if status_filter:
+            return {"cultures": rows(connection, "SELECT * FROM culture_master WHERE status=? ORDER BY created_ts DESC", (status_filter,))}
+        return {"cultures": rows(connection, "SELECT * FROM culture_master ORDER BY created_ts DESC")}
+
+
+@app.get("/cultures/{culture_id}/usage", dependencies=[Depends(require_auth)])
+def culture_usage(culture_id: str) -> dict[str, Any]:
+    with get_db() as connection:
+        culture = one(connection, "SELECT * FROM culture_master WHERE culture_id=?", (culture_id,))
+        if not culture:
+            raise HTTPException(404, detail="culture not found")
+        usage = rows(connection, "SELECT * FROM lineage_edges WHERE source_type='culture' AND source_id=? ORDER BY ts, id", (culture_id,))
+        activity = rows(connection, "SELECT * FROM activity_events WHERE source_type='culture' AND source_id=? ORDER BY ts, id", (culture_id,))
+        return {"culture": culture, "usage": usage, "activity": activity}
+
+
+@app.post("/lineage", dependencies=[Depends(require_auth)])
+def create_lineage(body: LineageCreate) -> dict[str, Any]:
+    values = model_data(body)
+    ensure_source(values.get("data_source"))
+    values.pop("client_event_id", None)
+    with get_db() as connection:
+        duplicate = dedupe_response(connection, body.client_event_id)
+        if duplicate is not None:
+            return duplicate
+        connection.execute("BEGIN IMMEDIATE")
+        try:
+            edge_id = insert_row(connection, "lineage_edges", values)
+            activity_id = record_activity(connection, "lineage_linked", values)
+            response = {"id": edge_id, "activity_id": activity_id}
+            remember_response(connection, body.client_event_id, "/lineage", response)
+            connection.commit()
+            return response
         except Exception:
             connection.rollback(); raise
 

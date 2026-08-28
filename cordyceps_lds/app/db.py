@@ -100,6 +100,33 @@ CREATE TABLE IF NOT EXISTS costs (
     labor_minutes REAL, kwh REAL, equipment_id TEXT, notes TEXT, operator TEXT,
     data_source TEXT CHECK(data_source IN ('manual','qr_scan','sensor','import','system'))
 );
+CREATE TABLE IF NOT EXISTS culture_master (
+    culture_id TEXT PRIMARY KEY, parent_culture_id TEXT REFERENCES culture_master(culture_id),
+    culture_type TEXT NOT NULL, created_ts TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active',
+    volume_ml REAL, notes TEXT, operator TEXT,
+    data_source TEXT CHECK(data_source IN ('manual','qr_scan','sensor','import','system'))
+);
+CREATE TABLE IF NOT EXISTS autoclave_cycles (
+    id INTEGER PRIMARY KEY, ts TEXT NOT NULL, material_type TEXT NOT NULL,
+    material_name TEXT, quantity REAL NOT NULL, batch_id TEXT REFERENCES batch_master(batch_id),
+    culture_id TEXT REFERENCES culture_master(culture_id), temperature_c REAL NOT NULL,
+    pressure_psi REAL NOT NULL, duration_min REAL NOT NULL, parameters_source TEXT NOT NULL,
+    parameter_sources_json TEXT,
+    notes TEXT, operator TEXT,
+    data_source TEXT CHECK(data_source IN ('manual','qr_scan','sensor','import','system'))
+);
+CREATE TABLE IF NOT EXISTS lineage_edges (
+    id INTEGER PRIMARY KEY, ts TEXT NOT NULL, source_type TEXT NOT NULL, source_id TEXT NOT NULL,
+    destination_type TEXT NOT NULL, destination_id TEXT NOT NULL, relationship TEXT NOT NULL,
+    quantity REAL, unit TEXT, notes TEXT, operator TEXT,
+    data_source TEXT CHECK(data_source IN ('manual','qr_scan','sensor','import','system'))
+);
+CREATE TABLE IF NOT EXISTS activity_events (
+    id INTEGER PRIMARY KEY, ts TEXT NOT NULL, event_type TEXT NOT NULL,
+    source_type TEXT, source_id TEXT, destination_type TEXT, destination_id TEXT,
+    quantity REAL, unit TEXT, parameters_json TEXT, notes TEXT, operator TEXT,
+    data_source TEXT CHECK(data_source IN ('manual','qr_scan','sensor','import','system'))
+);
 CREATE TABLE IF NOT EXISTS client_event_dedupe (
     client_event_id TEXT PRIMARY KEY, endpoint TEXT NOT NULL, response_json TEXT NOT NULL,
     created_ts TEXT NOT NULL
